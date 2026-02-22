@@ -134,14 +134,64 @@ cd android
    - Open the APK file on your device
    - Follow the installation prompts
 
-## Automated Builds with GitHub Actions
+## Downloading Pre-built APKs
 
-This repository includes GitHub Actions workflows that automatically build the Android APK on every push. The generated APK can be downloaded from the Actions tab in GitHub:
+### From GitHub Releases (Recommended)
+
+The easiest way to get the app is to download a pre-built APK from GitHub Releases:
+
+1. Go to the [Releases page](https://github.com/npequeux/Countdown-to-Us/releases)
+2. Download the latest `countdown-to-us-*.apk` file
+3. Install it on your Android device
+
+### From GitHub Actions Artifacts
+
+Development builds are also available from GitHub Actions. The generated APK can be downloaded from the Actions tab in GitHub:
 
 1. Go to the repository on GitHub
 2. Click on the "Actions" tab
 3. Select the latest workflow run
 4. Download the APK from the "Artifacts" section
+
+## Creating a New Release
+
+To create a new release with an APK:
+
+### Option 1: Using Git Tags (Recommended)
+
+```bash
+# Create and push a new version tag
+git tag v1.0.1
+git push origin v1.0.1
+```
+
+This will automatically trigger the release workflow that builds the APK and creates a GitHub release.
+
+### Option 2: Manual Workflow Dispatch
+
+1. Go to the "Actions" tab on GitHub
+2. Select "Release APK" workflow
+3. Click "Run workflow"
+4. Enter the version number (e.g., v1.0.1)
+5. Click "Run workflow"
+
+The release workflow will:
+- Build a release APK
+- Create a GitHub release with the specified version
+- Attach the APK to the release
+- Make it available for download
+
+## Versioning
+
+This project follows [Semantic Versioning](https://semver.org/):
+- **MAJOR version** (X.0.0): Incompatible changes
+- **MINOR version** (1.X.0): New functionality in a backward compatible manner
+- **PATCH version** (1.0.X): Backward compatible bug fixes
+
+When updating the version:
+1. Update `versionCode` and `versionName` in `android/app/build.gradle`
+2. Update `version` in `package.json`
+3. Create and push a git tag with the new version
 
 ## Project Structure
 

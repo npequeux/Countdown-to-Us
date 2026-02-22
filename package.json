@@ -14,8 +14,16 @@
     "type": "git",
     "url": "git+https://github.com/npequeux/Countdown-to-Us.git"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": [
+    "countdown",
+    "timer",
+    "android",
+    "capacitor",
+    "mobile-app",
+    "countdown-timer",
+    "date-countdown"
+  ],
+  "author": "npequeux",
   "license": "ISC",
   "type": "commonjs",
   "bugs": {

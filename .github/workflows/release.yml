@@ -1,0 +1,104 @@
+name: Release APK
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g., v1.0.0)'
+        required: true
+        default: 'v1.0.0'
+
+jobs:
+  build-and-release:
+    name: Build and Release APK
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Copy web files to www directory
+        run: |
+          mkdir -p www
+          cp index.html countdown.js style.css us.jpg www/
+
+      - name: Sync Capacitor
+        run: npx cap sync android
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: 'gradle'
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x android/gradlew
+
+      - name: Build Release APK
+        run: |
+          cd android
+          ./gradlew assembleRelease --no-daemon
+
+      - name: Get version from tag or input
+        id: get_version
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Rename APK
+        run: |
+          VERSION=${{ steps.get_version.outputs.version }}
+          mv android/app/build/outputs/apk/release/app-release-unsigned.apk countdown-to-us-${VERSION}.apk
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.get_version.outputs.version }}
+          name: Release ${{ steps.get_version.outputs.version }}
+          body: |
+            ## Countdown to Us - Release ${{ steps.get_version.outputs.version }}
+            
+            ### Download the APK
+            Download the APK file below and install it on your Android device.
+            
+            ### Installation Instructions
+            1. Download the APK file
+            2. Enable "Unknown sources" in your Android device settings
+            3. Open the APK file to install
+            
+            ### What's Included
+            - Android APK (unsigned release build)
+            - Target date: October 1, 2028
+            
+            **Note**: This is an unsigned APK. For production use, the APK should be signed with a proper keystore.
+          files: |
+            countdown-to-us-${{ steps.get_version.outputs.version }}.apk
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload APK as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: countdown-to-us-release-${{ steps.get_version.outputs.version }}
+          path: countdown-to-us-${{ steps.get_version.outputs.version }}.apk
+          retention-days: 90
