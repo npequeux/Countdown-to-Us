@@ -1,6 +1,6 @@
 # Countdown to Us
 
-A beautiful countdown timer displaying the time remaining until October 1, 2028.
+A beautiful countdown timer displaying the time remaining until October 1, 2028. Available as both a web application and a native Android app.
 
 ## Features
 
@@ -8,23 +8,185 @@ A beautiful countdown timer displaying the time remaining until October 1, 2028.
 - Responsive design that works on desktop and mobile devices
 - Modern glassmorphism UI with gradient background
 - Updates every second for accurate time tracking
+- Available as an installable Android APK
 
-## How to Use
+## Prerequisites
 
-1. Clone this repository
-2. Open `index.html` in your web browser
-3. Watch the countdown to October 1, 2028!
+### For Web Development
+- A modern web browser (Chrome, Firefox, Safari, Edge)
 
-## Files
+### For Android Development
+- [Node.js](https://nodejs.org/) (version 16 or higher)
+- [npm](https://www.npmjs.com/) (comes with Node.js)
+- [Java Development Kit (JDK)](https://www.oracle.com/java/technologies/downloads/) version 11 or higher
+- [Android Studio](https://developer.android.com/studio) (for Android development)
+- Android SDK with API level 22 or higher
 
-- `index.html` - Main HTML structure
-- `countdown.js` - JavaScript countdown logic
-- `style.css` - Styling and responsive design
+## Installation
+
+### Clone the Repository
+
+```bash
+git clone https://github.com/npequeux/Countdown-to-Us.git
+cd Countdown-to-Us
+```
+
+### Install Dependencies
+
+```bash
+npm install
+```
+
+## How to Test
+
+### Testing the Web App
+
+The easiest way to test the web application:
+
+1. **Direct browser access**: Simply open `index.html` in any modern web browser
+2. **Using a local server** (recommended for more accurate testing):
+   ```bash
+   # Using Python 3
+   python3 -m http.server 8000
+   
+   # Or using Node.js (if you have http-server installed)
+   npx http-server . -p 8000
+   ```
+   Then open `http://localhost:8000` in your browser
+
+### Testing the Android App
+
+1. **Using Android Studio**:
+   ```bash
+   npm run open:android
+   ```
+   This opens the project in Android Studio where you can:
+   - Run the app on an emulator
+   - Run the app on a connected physical device
+   - Debug the application
+
+2. **Using the command line** (requires Android device connected or emulator running):
+   ```bash
+   cd android
+   ./gradlew installDebug
+   ```
+
+## How to Compile
+
+### Compiling for Web
+
+The web application doesn't require compilation - it uses vanilla HTML, CSS, and JavaScript. However, if you make changes, you can sync them to the Android project:
+
+```bash
+npm run sync
+```
+
+### Compiling for Android
+
+#### Debug Build (for testing)
+
+```bash
+npm run build:android
+```
+
+The APK will be generated at: `android/app/build/outputs/apk/debug/app-debug.apk`
+
+#### Release Build (for distribution)
+
+```bash
+npm run build:android-release
+```
+
+The APK will be generated at: `android/app/build/outputs/apk/release/app-release-unsigned.apk`
+
+**Note**: Release builds need to be signed before installation. See [Android documentation](https://developer.android.com/studio/publish/app-signing) for details on signing APKs.
+
+#### Using Gradle Directly
+
+You can also use Gradle commands directly:
+
+```bash
+cd android
+
+# Debug build
+./gradlew assembleDebug
+
+# Release build
+./gradlew assembleRelease
+
+# Clean build artifacts
+./gradlew clean
+```
+
+## Installing the APK on Android Devices
+
+1. **Enable installation from unknown sources** on your Android device:
+   - Go to Settings > Security
+   - Enable "Unknown sources" or "Install unknown apps"
+
+2. **Transfer the APK** to your device:
+   - Via USB cable
+   - Via cloud storage (Google Drive, Dropbox, etc.)
+   - Via email
+   - Download from GitHub Actions artifacts (see below)
+
+3. **Install the APK**:
+   - Open the APK file on your device
+   - Follow the installation prompts
+
+## Automated Builds with GitHub Actions
+
+This repository includes GitHub Actions workflows that automatically build the Android APK on every push. The generated APK can be downloaded from the Actions tab in GitHub:
+
+1. Go to the repository on GitHub
+2. Click on the "Actions" tab
+3. Select the latest workflow run
+4. Download the APK from the "Artifacts" section
+
+## Project Structure
+
+```
+Countdown-to-Us/
+├── www/                      # Web application source files
+│   ├── index.html           # Main HTML structure
+│   ├── countdown.js         # JavaScript countdown logic
+│   └── style.css            # Styling and responsive design
+├── android/                 # Android native project (generated)
+├── capacitor.config.json    # Capacitor configuration
+├── package.json            # Node.js dependencies and scripts
+└── README.md               # This file
+```
 
 ## Target Date
 
 The countdown is set to October 1, 2028 at 00:00:00 (midnight).
 
-## Live Demo
+## Development Workflow
 
-Simply open the `index.html` file in any modern web browser to see the countdown in action.
+1. Make changes to files in the root directory (`index.html`, `countdown.js`, `style.css`)
+2. Copy changes to www directory: `cp index.html countdown.js style.css www/`
+3. Test in browser by opening `index.html`
+4. Sync changes to Android: `npm run sync`
+5. Build Android app: `npm run build:android`
+6. Test on Android device or emulator
+
+## Troubleshooting
+
+### Android Build Issues
+
+- **Gradle build fails**: Ensure you have JDK 11 or higher installed and JAVA_HOME is set correctly
+- **SDK not found**: Open the project in Android Studio at least once to download required SDKs
+- **Out of memory**: Increase Gradle memory in `android/gradle.properties`
+
+### Web App Issues
+
+- **Countdown not updating**: Check browser console for JavaScript errors
+- **Styling issues**: Clear browser cache and reload
+
+## License
+
+ISC
+
+## Contributing
+
+Feel free to open issues or submit pull requests for improvements.
