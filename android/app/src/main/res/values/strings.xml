@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Countdown to Us</string>
+    <string name="title_activity_main">Countdown to Us</string>
+    <string name="package_name">com.countdown.tous</string>
+    <string name="custom_url_scheme">com.countdown.tous</string>
+</resources>

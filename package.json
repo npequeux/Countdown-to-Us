@@ -1,0 +1,30 @@
+{
+  "name": "countdown-to-us",
+  "version": "1.0.0",
+  "description": "A beautiful countdown timer displaying the time remaining until October 1, 2028.",
+  "main": "countdown.js",
+  "scripts": {
+    "sync": "npx cap sync",
+    "build:android": "npx cap sync android && cd android && ./gradlew assembleDebug",
+    "build:android-release": "npx cap sync android && cd android && ./gradlew assembleRelease",
+    "open:android": "npx cap open android",
+    "test": "echo \"Open index.html in a browser to test the web app\""
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/npequeux/Countdown-to-Us.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/npequeux/Countdown-to-Us/issues"
+  },
+  "homepage": "https://github.com/npequeux/Countdown-to-Us#readme",
+  "devDependencies": {
+    "@capacitor/android": "^8.1.0",
+    "@capacitor/cli": "^8.1.0",
+    "@capacitor/core": "^8.1.0"
+  }
+}

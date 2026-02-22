@@ -1,0 +1,28 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+android/build/
+android/app/build/
+android/.gradle/
+android/local.properties
+android/.cxx/
+android/captures/
+*.apk
+*.aab
+*.ap_
+*.dex
+
+# IDE
+.idea/
+.vscode/
+*.iml
+.DS_Store
+
+# Capacitor
+android/capacitor-cordova-android-plugins/
+android/app/src/main/assets/public/
+
+# Gradle
+.gradle/
+gradle.properties.local
