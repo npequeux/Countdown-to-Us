@@ -144,6 +144,8 @@ The easiest way to get the app is to download a pre-built APK from GitHub Releas
 2. Download the latest `countdown-to-us-*.apk` file
 3. Install it on your Android device
 
+**Note**: Each commit to the main branch automatically uploads a new debug APK to the latest release, named with the commit date and SHA (e.g., `countdown-to-us-20260222-123456-abc1234.apk`). This allows you to always access the most recent build from the latest release page.
+
 ### From GitHub Actions Artifacts
 
 Development builds are also available from GitHub Actions. The generated APK can be downloaded from the Actions tab in GitHub:
