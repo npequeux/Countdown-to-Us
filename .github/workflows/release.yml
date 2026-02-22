@@ -66,11 +66,14 @@ jobs:
       - name: Rename APK
         run: |
           VERSION=${{ steps.get_version.outputs.version }}
-          # Check if signed APK exists, otherwise use unsigned
+          # Verify that signed APK was created successfully
           if [ -f android/app/build/outputs/apk/release/app-release.apk ]; then
             mv android/app/build/outputs/apk/release/app-release.apk countdown-to-us-${VERSION}.apk
+            echo "✓ Signed APK created successfully"
           else
-            mv android/app/build/outputs/apk/release/app-release-unsigned.apk countdown-to-us-${VERSION}.apk
+            echo "✗ Error: Signed APK not found at android/app/build/outputs/apk/release/app-release.apk"
+            echo "Build should have produced a signed APK with debug keystore"
+            exit 1
           fi
 
       - name: Create Release
