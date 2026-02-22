@@ -18,21 +18,13 @@ android {
     }
     signingConfigs {
         debug {
-            // Use Android debug keystore (created automatically by Android SDK)
+            // Use Android debug keystore
             // Location: ~/.android/debug.keystore (Linux/Mac) or %USERPROFILE%\.android\debug.keystore (Windows)
-            def debugKeystorePath = file("${System.getProperty('user.home')}/.android/debug.keystore")
-            if (debugKeystorePath.exists()) {
-                storeFile debugKeystorePath
-                storePassword 'android'
-                keyAlias 'androiddebugkey'
-                keyPassword 'android'
-            } else {
-                // In most environments, Android SDK automatically creates debug keystore
-                // If it doesn't exist, Gradle will create it during the build
-                storePassword 'android'
-                keyAlias 'androiddebugkey'
-                keyPassword 'android'
-            }
+            // In CI/CD, the keystore is created if it doesn't exist
+            storeFile file("${System.getProperty('user.home')}/.android/debug.keystore")
+            storePassword 'android'
+            keyAlias 'androiddebugkey'
+            keyPassword 'android'
         }
     }
     buildTypes {
