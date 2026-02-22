@@ -4,10 +4,17 @@ This guide explains how to sign your Android APK for production releases.
 
 ## Why Sign APKs?
 
+- **Required for Installation**: Android requires all APKs to be signed to install on devices
 - **Security**: Signing ensures the APK hasn't been tampered with
 - **Google Play**: Required for publishing to Google Play Store
 - **Updates**: Apps must be signed with the same key to be updated
 - **Trust**: Users can verify the app's authenticity
+
+## Default Configuration
+
+By default, this project is configured to sign release builds with the Android debug keystore. This allows the APKs to be installed on devices for testing purposes without additional configuration.
+
+**Important**: The debug keystore should **not** be used for production releases or distribution through app stores. For production use, follow the guide below to create and configure a proper release keystore.
 
 ## Generating a Keystore
 

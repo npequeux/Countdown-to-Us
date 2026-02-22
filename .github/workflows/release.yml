@@ -66,7 +66,12 @@ jobs:
       - name: Rename APK
         run: |
           VERSION=${{ steps.get_version.outputs.version }}
-          mv android/app/build/outputs/apk/release/app-release-unsigned.apk countdown-to-us-${VERSION}.apk
+          # Check if signed APK exists, otherwise use unsigned
+          if [ -f android/app/build/outputs/apk/release/app-release.apk ]; then
+            mv android/app/build/outputs/apk/release/app-release.apk countdown-to-us-${VERSION}.apk
+          else
+            mv android/app/build/outputs/apk/release/app-release-unsigned.apk countdown-to-us-${VERSION}.apk
+          fi
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
@@ -85,10 +90,10 @@ jobs:
             3. Open the APK file to install
             
             ### What's Included
-            - Android APK (unsigned release build)
+            - Android APK (signed with debug keystore for testing)
             - Target date: October 1, 2028
             
-            **Note**: This is an unsigned APK. For production use, the APK should be signed with a proper keystore.
+            **Note**: This APK is signed with a debug keystore for testing purposes. For production distribution, it should be signed with a proper release keystore.
           files: |
             countdown-to-us-${{ steps.get_version.outputs.version }}.apk
           draft: false

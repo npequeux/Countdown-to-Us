@@ -16,8 +16,19 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        debug {
+            storeFile file("${System.getProperty('user.home')}/.android/debug.keystore")
+            storePassword 'android'
+            keyAlias 'androiddebugkey'
+            keyPassword 'android'
+        }
+    }
     buildTypes {
         release {
+            // Sign release builds with debug keystore for testing purposes
+            // For production, replace this with a proper release keystore
+            signingConfig signingConfigs.debug
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
