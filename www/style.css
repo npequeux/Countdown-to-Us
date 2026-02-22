@@ -30,6 +30,18 @@ h1 {
     text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
 }
 
+.image-container {
+    margin-bottom: 2rem;
+}
+
+.us-image {
+    max-width: 100%;
+    max-height: 300px;
+    border-radius: 15px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+    object-fit: cover;
+}
+
 .countdown {
     display: flex;
     justify-content: center;
@@ -69,6 +81,10 @@ h1 {
 @media (max-width: 768px) {
     h1 {
         font-size: 1.8rem;
+    }
+    
+    .us-image {
+        max-height: 200px;
     }
     
     .countdown {
