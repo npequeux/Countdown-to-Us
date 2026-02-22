@@ -204,7 +204,9 @@ Once you have a signed APK:
 4. Fill in store listing details
 5. Submit for review
 
-For automated publishing, consider using the [Google Play Publish Action](https://github.com/r0adkll/upload-google-play).
+For automated publishing, consider:
+- [Google Play Publish Action](https://github.com/r0adkll/upload-google-play) - GitHub Action for publishing
+- [Gradle Play Publisher](https://github.com/Triple-T/gradle-play-publisher) - Official Gradle plugin for Google Play publishing
 
 ## Additional Resources
 
