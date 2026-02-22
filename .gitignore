@@ -26,3 +26,11 @@ android/app/src/main/assets/public/
 # Gradle
 .gradle/
 gradle.properties.local
+
+# Keystore files (keep these secure and never commit!)
+*.keystore
+*.jks
+android/keystore.properties
+keystore.properties
+keystore.base64.txt
+

@@ -99,7 +99,7 @@ npm run build:android-release
 
 The APK will be generated at: `android/app/build/outputs/apk/release/app-release-unsigned.apk`
 
-**Note**: Release builds need to be signed before installation. See [Android documentation](https://developer.android.com/studio/publish/app-signing) for details on signing APKs.
+**Note**: Release builds need to be signed before distribution. See [docs/APK_SIGNING.md](docs/APK_SIGNING.md) for a detailed guide on signing APKs for production.
 
 #### Using Gradle Directly
 
