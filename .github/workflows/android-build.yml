@@ -21,7 +21,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '22'
           cache: 'npm'
 
       - name: Install dependencies
@@ -30,7 +30,7 @@ jobs:
       - name: Copy web files to www directory
         run: |
           mkdir -p www
-          cp index.html countdown.js style.css www/
+          cp index.html countdown.js style.css us.jpg www/
 
       - name: Sync Capacitor
         run: npx cap sync android
