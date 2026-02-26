@@ -97,9 +97,9 @@ The APK will be generated at: `android/app/build/outputs/apk/debug/app-debug.apk
 npm run build:android-release
 ```
 
-The APK will be generated at: `android/app/build/outputs/apk/release/app-release-unsigned.apk`
+The APK will be generated at: `android/app/build/outputs/apk/release/app-release.apk`
 
-**Note**: Release builds need to be signed before distribution. See [docs/APK_SIGNING.md](docs/APK_SIGNING.md) for a detailed guide on signing APKs for production.
+**Note**: Release builds are signed with the Android debug keystore by default for testing purposes. For production distribution, you should configure a proper release keystore. See [docs/APK_SIGNING.md](docs/APK_SIGNING.md) for a detailed guide on signing APKs for production.
 
 #### Using Gradle Directly
 
