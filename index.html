@@ -8,9 +8,14 @@
 </head>
 <body>
     <div class="container">
-        <h1>Countdown to October 1, 2028</h1>
+        <h1 id="countdown-title">Countdown to October 1, 2028</h1>
         <div class="image-container">
-            <img src="us.jpg" alt="Photo of us together" class="us-image">
+            <img id="slideshow-image" src="us.jpg" alt="Photo of us together" class="us-image">
+            <div class="slideshow-controls" id="slideshow-controls" style="display:none">
+                <button class="slide-btn" id="prev-btn" aria-label="Previous image">&#8249;</button>
+                <span class="slide-indicator" id="slide-indicator"></span>
+                <button class="slide-btn" id="next-btn" aria-label="Next image">&#8250;</button>
+            </div>
         </div>
         <div class="countdown">
             <div class="time-unit">
@@ -30,8 +35,22 @@
                 <span class="label">Seconds</span>
             </div>
         </div>
-        <div class="target-date">
+        <div class="target-date" id="target-date-display">
             Target Date: October 1, 2028 at 00:00:00
+        </div>
+        <button class="settings-toggle" id="settings-toggle" aria-expanded="false" aria-controls="settings-panel">&#9881; Settings</button>
+        <div class="settings-panel" id="settings-panel" hidden>
+            <h2>Settings</h2>
+            <div class="settings-group">
+                <label for="target-date-input">Target Date &amp; Time</label>
+                <input type="datetime-local" id="target-date-input">
+                <button class="btn" id="apply-date-btn">Apply</button>
+            </div>
+            <div class="settings-group">
+                <label for="photo-upload">Upload Photos (slideshow)</label>
+                <input type="file" id="photo-upload" accept="image/*" multiple>
+                <button class="btn btn-danger" id="clear-photos-btn">Clear Photos</button>
+            </div>
         </div>
     </div>
     <script src="countdown.js"></script>
