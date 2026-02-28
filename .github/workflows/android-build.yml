@@ -83,26 +83,52 @@ jobs:
         run: |
           cp android/app/build/outputs/apk/debug/app-debug.apk countdown-to-us-${{ steps.commit_info.outputs.date }}-${{ steps.commit_info.outputs.sha_short }}.apk
 
-      - name: Get latest release
-        id: latest_release
+      - name: Delete existing latest-build tag and release
         if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
         run: |
-          set -e
-          LATEST_RELEASE=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-            "https://api.github.com/repos/${{ github.repository }}/releases/latest" | jq -r '.tag_name')
-          if [ "$LATEST_RELEASE" = "null" ] || [ -z "$LATEST_RELEASE" ]; then
-            echo "No release found, skipping upload"
-            echo "tag=null" >> $GITHUB_OUTPUT
-          else
-            echo "tag=$LATEST_RELEASE" >> $GITHUB_OUTPUT
-            echo "Latest release tag: $LATEST_RELEASE"
+          RELEASE_ID=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/repos/${{ github.repository }}/releases/tags/latest-build" \
+            | jq -r '.id')
+          if [ "$RELEASE_ID" != "null" ] && [ -n "$RELEASE_ID" ]; then
+            curl -s -X DELETE \
+              -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+              "https://api.github.com/repos/${{ github.repository }}/releases/${RELEASE_ID}"
           fi
+          curl -s -X DELETE \
+            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/repos/${{ github.repository }}/git/refs/tags/latest-build" || true
 
-      - name: Upload APK to latest release
-        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && steps.latest_release.outputs.tag != 'null'
+      - name: Create latest-build pre-release
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: ${{ steps.latest_release.outputs.tag }}
+          tag_name: latest-build
+          name: Latest Build
+          prerelease: true
+          make_latest: false
+          body: |
+            Latest debug build from commit [${{ steps.commit_info.outputs.sha_short }}](https://github.com/${{ github.repository }}/commit/${{ github.sha }}) built on ${{ steps.commit_info.outputs.date }}.
+
+            This pre-release is automatically updated on every commit to main.
           files: countdown-to-us-${{ steps.commit_info.outputs.date }}-${{ steps.commit_info.outputs.sha_short }}.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Add job summary
+        run: |
+          echo "## ✅ Android APK Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| | |" >> $GITHUB_STEP_SUMMARY
+          echo "|---|---|" >> $GITHUB_STEP_SUMMARY
+          echo "| **Commit** | \`${{ steps.commit_info.outputs.sha_short }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Build date** | ${{ steps.commit_info.outputs.date }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ github.event_name }}" = "push" ] && ([ "${{ github.ref }}" = "refs/heads/main" ] || [ "${{ github.ref }}" = "refs/heads/master" ]); then
+            echo "### 📥 Download Latest Build" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "[**Download APK from Latest Build release**](https://github.com/${{ github.repository }}/releases/tag/latest-build)" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "### 📥 Download This Build" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Download the APK from the **Artifacts** section of this workflow run." >> $GITHUB_STEP_SUMMARY
+          fi

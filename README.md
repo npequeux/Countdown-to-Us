@@ -1,5 +1,8 @@
 # Countdown to Us
 
+[![Android Build](https://github.com/npequeux/Countdown-to-Us/actions/workflows/android-build.yml/badge.svg)](https://github.com/npequeux/Countdown-to-Us/actions/workflows/android-build.yml)
+[![Latest Build](https://img.shields.io/github/v/release/npequeux/Countdown-to-Us?include_prereleases&filter=latest-build&label=latest%20build&color=blue)](https://github.com/npequeux/Countdown-to-Us/releases/tag/latest-build)
+
 A beautiful countdown timer displaying the time remaining until October 1, 2028. Available as both a web application and a native Android app.
 
 ## Features
@@ -136,15 +139,21 @@ cd android
 
 ## Downloading Pre-built APKs
 
-### From GitHub Releases (Recommended)
+### Latest Build (updated on every commit)
 
-The easiest way to get the app is to download a pre-built APK from GitHub Releases:
+The easiest way to get the most recent APK is from the rolling pre-release that is automatically updated on every commit to main:
 
-1. Go to the [Releases page](https://github.com/npequeux/Countdown-to-Us/releases)
-2. Download the latest `countdown-to-us-*.apk` file
+1. Go to the [Latest Build release](https://github.com/npequeux/Countdown-to-Us/releases/tag/latest-build)
+2. Download the `countdown-to-us-*.apk` file
 3. Install it on your Android device
 
-**Note**: Each commit to the main branch automatically uploads a new debug APK to the latest release, named with the commit date and SHA (e.g., `countdown-to-us-20260222-123456-abc1234.apk`). This allows you to always access the most recent build from the latest release page.
+### From GitHub Releases (Stable Versions)
+
+Stable versioned APKs are available on the GitHub Releases page:
+
+1. Go to the [Releases page](https://github.com/npequeux/Countdown-to-Us/releases)
+2. Download the latest `countdown-to-us-*.apk` file from a versioned release (e.g., `v0.1`)
+3. Install it on your Android device
 
 ### From GitHub Actions Artifacts
 
