@@ -6,21 +6,32 @@
 
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: url('us.jpg') center/cover no-repeat fixed;
     min-height: 100vh;
     display: flex;
     justify-content: center;
     align-items: center;
     color: #fff;
+    position: relative;
+}
+
+body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    z-index: 0;
 }
 
 .container {
+    position: relative;
+    z-index: 1;
     text-align: center;
     padding: 2rem;
     background: rgba(255, 255, 255, 0.1);
     border-radius: 20px;
     backdrop-filter: blur(10px);
-    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
     border: 1px solid rgba(255, 255, 255, 0.18);
 }
 
@@ -79,28 +90,46 @@ h1 {
     margin-top: 1rem;
 }
 
+.settings-wrapper {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+}
+
 .settings-toggle {
-    margin-top: 1.5rem;
-    background: rgba(255, 255, 255, 0.2);
-    border: 1px solid rgba(255, 255, 255, 0.4);
-    color: #fff;
-    padding: 0.5rem 1.2rem;
-    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    color: rgba(255, 255, 255, 0.65);
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
     cursor: pointer;
     font-size: 1rem;
-    transition: background 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s, color 0.2s;
+    padding: 0;
 }
 
 .settings-toggle:hover {
-    background: rgba(255, 255, 255, 0.35);
+    background: rgba(255, 255, 255, 0.28);
+    color: #fff;
 }
 
 .settings-panel {
-    margin-top: 1.5rem;
-    background: rgba(255, 255, 255, 0.15);
+    position: absolute;
+    top: 2.6rem;
+    right: 0;
+    width: 300px;
+    background: rgba(15, 15, 25, 0.82);
+    backdrop-filter: blur(20px);
     border-radius: 12px;
-    padding: 1.5rem;
+    padding: 1.2rem 1.4rem;
     text-align: left;
+    border: 1px solid rgba(255, 255, 255, 0.13);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+    z-index: 10;
 }
 
 .settings-panel h2 {
@@ -223,6 +252,6 @@ h1 {
     }
 
     .settings-panel {
-        padding: 1rem;
+        max-width: calc(100vw - 3rem);
     }
 }
