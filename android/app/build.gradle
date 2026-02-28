@@ -1,5 +1,10 @@
 apply plugin: 'com.android.application'
 
+def buildVersionCode = 1
+if (project.hasProperty('versionCode')) {
+    try { buildVersionCode = Integer.parseInt(project.property('versionCode').toString()) } catch (NumberFormatException ignored) {}
+}
+
 android {
     namespace = "com.countdown.tous"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -7,7 +12,7 @@ android {
         applicationId "com.countdown.tous"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
+        versionCode buildVersionCode
         versionName "1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
