@@ -22,12 +22,12 @@ A beautiful countdown timer displaying the time remaining until October 1, 2028.
 - A modern web browser (Chrome, Firefox, Safari, Edge)
 
 ### For Desktop Development (Windows & Linux)
-- [Node.js](https://nodejs.org/) (version 16 or higher)
+- [Node.js](https://nodejs.org/) (version 22 or higher)
 - [npm](https://www.npmjs.com/) (comes with Node.js)
 - On Linux: `fakeroot` and `dpkg` for .deb builds (`sudo apt-get install fakeroot dpkg`)
 
 ### For Android Development
-- [Node.js](https://nodejs.org/) (version 16 or higher)
+- [Node.js](https://nodejs.org/) (version 22 or higher)
 - [npm](https://www.npmjs.com/) (comes with Node.js)
 - [Java Development Kit (JDK)](https://www.oracle.com/java/technologies/downloads/) version 11 or higher
 - [Android Studio](https://developer.android.com/studio) (for Android development)

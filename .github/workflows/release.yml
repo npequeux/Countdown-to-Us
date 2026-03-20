@@ -16,7 +16,7 @@ jobs:
     name: Build Android APK
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: read
 
     steps:
       - name: Checkout repository
@@ -96,7 +96,7 @@ jobs:
     name: Build Linux (AppImage & deb)
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: read
 
     steps:
       - name: Checkout repository
@@ -122,8 +122,6 @@ jobs:
 
       - name: Build Linux packages
         run: npm run build:linux
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Rename Linux artifacts
         run: |
@@ -153,7 +151,7 @@ jobs:
     name: Build Windows (Installer & Portable)
     runs-on: windows-latest
     permissions:
-      contents: write
+      contents: read
 
     steps:
       - name: Checkout repository
@@ -180,8 +178,6 @@ jobs:
 
       - name: Build Windows packages
         run: npm run build:win
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Rename Windows artifacts
         shell: bash
