@@ -1,4 +1,4 @@
-name: Release APK
+name: Release
 
 on:
   push:
@@ -12,8 +12,8 @@ on:
         default: 'v1.0.0'
 
 jobs:
-  build-and-release:
-    name: Build and Release APK
+  build-android:
+    name: Build Android APK
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -76,15 +76,167 @@ jobs:
       - name: Rename APK
         run: |
           VERSION=${{ steps.get_version.outputs.version }}
-          # Verify that signed APK was created successfully
           if [ -f android/app/build/outputs/apk/release/app-release.apk ]; then
-            mv android/app/build/outputs/apk/release/app-release.apk countdown-to-us-${VERSION}.apk
-            echo "✓ Signed APK created successfully"
+            mv android/app/build/outputs/apk/release/app-release.apk countdown-to-us-android-${VERSION}.apk
           else
             echo "✗ Error: Signed APK not found at android/app/build/outputs/apk/release/app-release.apk"
-            echo "Build should have produced a signed APK with debug keystore"
+            echo "The Gradle assembleRelease task should have produced a signed APK with the debug keystore."
+            echo "Check the Gradle build logs above for errors."
             exit 1
           fi
+
+      - name: Upload Android APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apk
+          path: countdown-to-us-android-${{ steps.get_version.outputs.version }}.apk
+          retention-days: 1
+
+  build-linux:
+    name: Build Linux (AppImage & deb)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Get version from tag or input
+        id: get_version
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build Linux packages
+        run: npm run build:linux
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Rename Linux artifacts
+        run: |
+          VERSION=${{ steps.get_version.outputs.version }}
+          for f in dist/*.AppImage; do
+            [ -f "$f" ] && mv "$f" "countdown-to-us-linux-${VERSION}.AppImage"
+          done
+          for f in dist/*.deb; do
+            [ -f "$f" ] && mv "$f" "countdown-to-us-linux-${VERSION}.deb"
+          done
+
+      - name: Upload Linux AppImage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-appimage
+          path: countdown-to-us-linux-${{ steps.get_version.outputs.version }}.AppImage
+          retention-days: 1
+
+      - name: Upload Linux deb artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-deb
+          path: countdown-to-us-linux-${{ steps.get_version.outputs.version }}.deb
+          retention-days: 1
+
+  build-windows:
+    name: Build Windows (Installer & Portable)
+    runs-on: windows-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Get version from tag or input
+        id: get_version
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build Windows packages
+        run: npm run build:win
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Rename Windows artifacts
+        shell: bash
+        run: |
+          VERSION=${{ steps.get_version.outputs.version }}
+          for f in dist/*Setup*.exe; do
+            [ -f "$f" ] && mv "$f" "countdown-to-us-windows-setup-${VERSION}.exe"
+          done
+          # Portable exe: electron-builder names it "{productName} Portable {version}.exe"
+          # or "{productName} {version}.exe" depending on version; match any non-Setup exe
+          for f in dist/*.exe; do
+            [[ "$f" != *Setup* ]] && [ -f "$f" ] && mv "$f" "countdown-to-us-windows-portable-${VERSION}.exe"
+          done
+
+      - name: Upload Windows installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-setup
+          path: countdown-to-us-windows-setup-${{ steps.get_version.outputs.version }}.exe
+          retention-days: 1
+
+      - name: Upload Windows portable artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-portable
+          path: countdown-to-us-windows-portable-${{ steps.get_version.outputs.version }}.exe
+          retention-days: 1
+
+  create-release:
+    name: Create GitHub Release
+    needs: [build-android, build-linux, build-windows]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Get version from tag or input
+        id: get_version
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+
+      - name: List release assets
+        run: find release-assets -type f | sort
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
@@ -93,30 +245,34 @@ jobs:
           name: Release ${{ steps.get_version.outputs.version }}
           body: |
             ## Countdown to Us - Release ${{ steps.get_version.outputs.version }}
-            
-            ### Download the APK
-            Download the APK file below and install it on your Android device.
-            
-            ### Installation Instructions
-            1. Download the APK file
-            2. Enable "Unknown sources" in your Android device settings
-            3. Open the APK file to install
-            
-            ### What's Included
-            - Android APK (signed with debug keystore for testing)
+
+            ### Downloads
+
+            | Platform | File | Notes |
+            |---|---|---|
+            | 🤖 Android | `countdown-to-us-android-*.apk` | Install on Android device |
+            | 🐧 Linux | `countdown-to-us-linux-*.AppImage` | Portable, runs on any Linux distro |
+            | 🐧 Linux | `countdown-to-us-linux-*.deb` | Debian/Ubuntu installer |
+            | 🪟 Windows | `countdown-to-us-windows-setup-*.exe` | Windows installer (recommended) |
+            | 🪟 Windows | `countdown-to-us-windows-portable-*.exe` | Windows portable (no installation) |
+
+            ### Installation
+
+            **Android**: Enable "Unknown sources" in Settings > Security, then open the APK file.
+
+            **Linux (AppImage)**: Make executable with `chmod +x *.AppImage`, then run it.
+
+            **Linux (deb)**: Install with `sudo dpkg -i *.deb` or double-click in your file manager.
+
+            **Windows**: Run the setup installer or use the portable executable directly.
+
+            ### Notes
+            - Android APK is signed with a debug keystore for testing purposes.
+            - Windows and Linux builds are packaged with Electron.
             - Target date: October 1, 2028
-            
-            **Note**: This APK is signed with a debug keystore for testing purposes. For production distribution, it should be signed with a proper release keystore.
-          files: |
-            countdown-to-us-${{ steps.get_version.outputs.version }}.apk
+          files: release-assets/**/*
           draft: false
           prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload APK as artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: countdown-to-us-release-${{ steps.get_version.outputs.version }}
-          path: countdown-to-us-${{ steps.get_version.outputs.version }}.apk
-          retention-days: 90

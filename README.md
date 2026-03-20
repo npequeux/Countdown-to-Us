@@ -1,9 +1,10 @@
 # Countdown to Us
 
 [![Android Build](https://github.com/npequeux/Countdown-to-Us/actions/workflows/android-build.yml/badge.svg)](https://github.com/npequeux/Countdown-to-Us/actions/workflows/android-build.yml)
+[![Desktop Build](https://github.com/npequeux/Countdown-to-Us/actions/workflows/desktop-build.yml/badge.svg)](https://github.com/npequeux/Countdown-to-Us/actions/workflows/desktop-build.yml)
 [![Latest Build](https://img.shields.io/github/v/release/npequeux/Countdown-to-Us?include_prereleases&filter=latest-build&label=latest%20build&color=blue)](https://github.com/npequeux/Countdown-to-Us/releases/tag/latest-build)
 
-A beautiful countdown timer displaying the time remaining until October 1, 2028. Available as both a web application and a native Android app.
+A beautiful countdown timer displaying the time remaining until October 1, 2028. Available as a web application, a native Android app, and desktop apps for Windows and Linux.
 
 ## Features
 
@@ -12,11 +13,18 @@ A beautiful countdown timer displaying the time remaining until October 1, 2028.
 - Modern glassmorphism UI with gradient background
 - Updates every second for accurate time tracking
 - Available as an installable Android APK
+- Available as a Windows desktop app (installer and portable)
+- Available as a Linux desktop app (AppImage and .deb)
 
 ## Prerequisites
 
 ### For Web Development
 - A modern web browser (Chrome, Firefox, Safari, Edge)
+
+### For Desktop Development (Windows & Linux)
+- [Node.js](https://nodejs.org/) (version 16 or higher)
+- [npm](https://www.npmjs.com/) (comes with Node.js)
+- On Linux: `fakeroot` and `dpkg` for .deb builds (`sudo apt-get install fakeroot dpkg`)
 
 ### For Android Development
 - [Node.js](https://nodejs.org/) (version 16 or higher)
@@ -84,6 +92,38 @@ The web application doesn't require compilation - it uses vanilla HTML, CSS, and
 npm run sync
 ```
 
+### Compiling for Desktop (Windows & Linux)
+
+#### Run Locally with Electron
+
+```bash
+npm run electron
+```
+
+#### Build for Windows (NSIS installer + portable .exe)
+
+```bash
+npm run build:win
+```
+
+The installer is generated at: `dist/Countdown to Us Setup *.exe`
+The portable executable is at: `dist/Countdown to Us *.exe`
+
+#### Build for Linux (AppImage + .deb)
+
+```bash
+npm run build:linux
+```
+
+The AppImage is generated at: `dist/Countdown to Us-*.AppImage`
+The .deb package is at: `dist/countdown-to-us_*.deb`
+
+#### Build for all desktop platforms at once
+
+```bash
+npm run build:desktop
+```
+
 ### Compiling for Android
 
 #### Debug Build (for testing)
@@ -137,32 +177,27 @@ cd android
    - Open the APK file on your device
    - Follow the installation prompts
 
-## Downloading Pre-built APKs
+## Downloading Pre-built Packages
+
+### From GitHub Releases (Stable Versions)
+
+All platform packages (Android APK, Windows installer, Linux AppImage/deb) are attached to every versioned release:
+
+1. Go to the [Releases page](https://github.com/npequeux/Countdown-to-Us/releases)
+2. Download the package for your platform:
+   - `countdown-to-us-android-*.apk` — Android
+   - `countdown-to-us-windows-setup-*.exe` — Windows installer
+   - `countdown-to-us-windows-portable-*.exe` — Windows portable
+   - `countdown-to-us-linux-*.AppImage` — Linux AppImage (portable)
+   - `countdown-to-us-linux-*.deb` — Linux Debian/Ubuntu package
 
 ### Latest Build (updated on every commit)
 
-The easiest way to get the most recent APK is from the rolling pre-release that is automatically updated on every commit to main:
+The easiest way to get the most recent Android APK is from the rolling pre-release that is automatically updated on every commit to main:
 
 1. Go to the [Latest Build release](https://github.com/npequeux/Countdown-to-Us/releases/tag/latest-build)
 2. Download the `countdown-to-us-*.apk` file
 3. Install it on your Android device
-
-### From GitHub Releases (Stable Versions)
-
-Stable versioned APKs are available on the GitHub Releases page:
-
-1. Go to the [Releases page](https://github.com/npequeux/Countdown-to-Us/releases)
-2. Download the latest `countdown-to-us-*.apk` file from a versioned release (e.g., `v0.1`)
-3. Install it on your Android device
-
-### From GitHub Actions Artifacts
-
-Development builds are also available from GitHub Actions. The generated APK can be downloaded from the Actions tab in GitHub:
-
-1. Go to the repository on GitHub
-2. Click on the "Actions" tab
-3. Select the latest workflow run
-4. Download the APK from the "Artifacts" section
 
 ## Creating a New Release
 
@@ -208,10 +243,12 @@ When updating the version:
 
 ```
 Countdown-to-Us/
-├── www/                      # Web application source files
+├── www/                      # Web application source files (for Android)
 │   ├── index.html           # Main HTML structure
 │   ├── countdown.js         # JavaScript countdown logic
 │   └── style.css            # Styling and responsive design
+├── electron/
+│   └── main.js              # Electron main process (desktop entry point)
 ├── android/                 # Android native project (generated)
 ├── capacitor.config.json    # Capacitor configuration
 ├── package.json            # Node.js dependencies and scripts

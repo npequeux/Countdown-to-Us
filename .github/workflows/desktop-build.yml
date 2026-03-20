@@ -1,0 +1,127 @@
+name: Desktop Build (Windows & Linux)
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build-linux:
+    name: Build Linux (AppImage & deb)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Linux packages
+        run: npm run build:linux
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get commit info
+        id: commit_info
+        run: |
+          echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+          echo "date=$(date +'%Y%m%d-%H%M%S')" >> $GITHUB_OUTPUT
+
+      - name: Upload Linux AppImage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: countdown-to-us-linux-appimage-${{ steps.commit_info.outputs.sha_short }}
+          path: dist/*.AppImage
+          retention-days: 30
+
+      - name: Upload Linux deb artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: countdown-to-us-linux-deb-${{ steps.commit_info.outputs.sha_short }}
+          path: dist/*.deb
+          retention-days: 30
+
+      - name: Add job summary
+        run: |
+          echo "## ✅ Linux Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| | |" >> $GITHUB_STEP_SUMMARY
+          echo "|---|---|" >> $GITHUB_STEP_SUMMARY
+          echo "| **Commit** | \`${{ steps.commit_info.outputs.sha_short }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Build date** | ${{ steps.commit_info.outputs.date }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📦 Artifacts" >> $GITHUB_STEP_SUMMARY
+          echo "- AppImage (portable, runs on any Linux distro)" >> $GITHUB_STEP_SUMMARY
+          echo "- .deb (Debian/Ubuntu installer)" >> $GITHUB_STEP_SUMMARY
+
+  build-windows:
+    name: Build Windows (Installer & Portable)
+    runs-on: windows-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Windows packages
+        run: npm run build:win
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get commit info
+        id: commit_info
+        shell: bash
+        run: |
+          echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+          echo "date=$(date +'%Y%m%d-%H%M%S')" >> $GITHUB_OUTPUT
+
+      - name: Upload Windows installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: countdown-to-us-windows-setup-${{ steps.commit_info.outputs.sha_short }}
+          path: dist/*Setup*.exe
+          retention-days: 30
+
+      - name: Upload Windows portable artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: countdown-to-us-windows-portable-${{ steps.commit_info.outputs.sha_short }}
+          path: |
+            dist/*.exe
+            !dist/*Setup*.exe
+          retention-days: 30
+
+      - name: Add job summary
+        shell: bash
+        run: |
+          echo "## ✅ Windows Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| | |" >> $GITHUB_STEP_SUMMARY
+          echo "|---|---|" >> $GITHUB_STEP_SUMMARY
+          echo "| **Commit** | \`${{ steps.commit_info.outputs.sha_short }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Build date** | ${{ steps.commit_info.outputs.date }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📦 Artifacts" >> $GITHUB_STEP_SUMMARY
+          echo "- NSIS installer (.exe setup)" >> $GITHUB_STEP_SUMMARY
+          echo "- Portable executable (.exe, no installation needed)" >> $GITHUB_STEP_SUMMARY

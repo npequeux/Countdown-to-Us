@@ -13,6 +13,9 @@ android/captures/
 *.ap_
 *.dex
 
+# Electron build outputs
+dist/
+
 # IDE
 .idea/
 .vscode/
