@@ -7,6 +7,7 @@
     "sync": "npx cap sync",
     "build:android": "npx cap sync android && cd android && ./gradlew assembleDebug",
     "build:android-release": "npx cap sync android && cd android && ./gradlew assembleRelease",
+    "build:android-bundle": "npx cap sync android && cd android && ./gradlew bundleRelease",
     "open:android": "npx cap open android",
     "electron": "electron .",
     "build:win": "electron-builder --win --x64 --publish never",

@@ -144,6 +144,18 @@ The APK will be generated at: `android/app/build/outputs/apk/release/app-release
 
 **Note**: Release builds are signed with the Android debug keystore by default for testing purposes. For production distribution, you should configure a proper release keystore. See [docs/APK_SIGNING.md](docs/APK_SIGNING.md) for a detailed guide on signing APKs for production.
 
+#### Building an Android App Bundle (AAB) for Google Play
+
+Google Play requires an AAB rather than an APK for new apps. Build one with:
+
+```bash
+npm run build:android-bundle
+```
+
+The AAB will be generated at: `android/app/build/outputs/bundle/release/app-release.aab`
+
+See [docs/PLAY_STORE_PUBLISHING.md](docs/PLAY_STORE_PUBLISHING.md) for the complete guide to publishing on Google Play.
+
 #### Using Gradle Directly
 
 You can also use Gradle commands directly:
@@ -154,12 +166,25 @@ cd android
 # Debug build
 ./gradlew assembleDebug
 
-# Release build
+# Release APK
 ./gradlew assembleRelease
+
+# Release AAB (for Google Play)
+./gradlew bundleRelease
 
 # Clean build artifacts
 ./gradlew clean
 ```
+
+## Publishing to Google Play Store
+
+See [docs/PLAY_STORE_PUBLISHING.md](docs/PLAY_STORE_PUBLISHING.md) for a step-by-step guide covering:
+
+- Creating a Google Play Developer account
+- Generating and configuring a production keystore
+- Building a signed Android App Bundle (AAB)
+- Submitting the app manually via Play Console
+- Automating releases with the included GitHub Actions workflow
 
 ## Installing the APK on Android Devices
 
