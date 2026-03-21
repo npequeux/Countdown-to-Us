@@ -101,7 +101,7 @@ function saveSlideshowImages(images) {
 }
 
 function updateBodyBackground(url) {
-    document.body.style.backgroundImage = 'url("' + url.replace(/"/g, '\\"') + '")';
+    document.body.style.backgroundImage = 'url("' + url.replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '")';
 }
 
 function updateSlideshowUI() {
