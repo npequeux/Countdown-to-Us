@@ -22,7 +22,6 @@
       "index.html",
       "countdown.js",
       "style.css",
-      "us.jpg",
       "electron/main.js"
     ],
     "win": {

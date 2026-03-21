@@ -1,5 +1,6 @@
 @page "/"
 @using System.Timers
+@using System.Linq
 @implements IAsyncDisposable
 @inject IJSRuntime JS
 
@@ -9,15 +10,12 @@
     <h1>@CountdownTitle</h1>
 
     <div class="image-container">
-        <img src="@CurrentImageSrc" alt="Photo of us together" class="us-image" />
-        @if (SlideshowImages.Count > 0)
-        {
-            <div class="slideshow-controls" style="display:@(SlideshowImages.Count > 1 ? "flex" : "none")">
-                <button class="slide-btn" @onclick="PrevSlide" aria-label="Previous image">&#8249;</button>
-                <span class="slide-indicator">@(CurrentSlide + 1) / @SlideshowImages.Count</span>
-                <button class="slide-btn" @onclick="NextSlide" aria-label="Next image">&#8250;</button>
-            </div>
-        }
+        <img src="@CurrentImageSrc" alt="Paradise island" class="us-image" />
+        <div class="slideshow-controls" style="display:@(ActiveImages.Count > 1 ? "flex" : "none")">
+            <button class="slide-btn" @onclick="PrevSlide" aria-label="Previous image">&#8249;</button>
+            <span class="slide-indicator">@(CurrentSlide + 1) / @ActiveImages.Count</span>
+            <button class="slide-btn" @onclick="NextSlide" aria-label="Next image">&#8250;</button>
+        </div>
     </div>
 
     <div class="countdown">
@@ -70,7 +68,19 @@
 
 @code {
     private const string DefaultTargetDate = "2028-10-01T00:00:00";
-    private const string DefaultImageSrc = "us.jpg";
+    private static readonly string[] DefaultImages = new[]
+    {
+        "https://images.unsplash.com/photo-DbwYNr8RPbg?w=1920&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-MVIMZX7IE6E?w=1920&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-x6znObe0wEM?w=1920&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-8manzosRGPE?w=1920&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-SF07QMAK0yQ?w=1920&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-3wylDrjxH-E?w=1920&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-kd7YjxDc5iE?w=1920&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-egxA6rjV2wc?w=1920&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-U5rMrSI7Pn4?w=1920&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-nO9yM-gZg7k?w=1920&auto=format&fit=crop&q=80"
+    };
     private const int SlideshowIntervalMs = 5000;
 
     private string _targetDateStr = DefaultTargetDate;
@@ -89,9 +99,11 @@
     private string TargetDateDisplay => _targetDate.ToString("MMMM d, yyyy 'at' hh:mm:ss tt");
 
     // Slideshow
+    private List<string> _defaultImages = new();
     private List<string> SlideshowImages { get; set; } = new();
     private int CurrentSlide { get; set; }
-    private string CurrentImageSrc => SlideshowImages.Count > 0 ? SlideshowImages[CurrentSlide] : DefaultImageSrc;
+    private List<string> ActiveImages => SlideshowImages.Count > 0 ? SlideshowImages : _defaultImages;
+    private string CurrentImageSrc => ActiveImages.Count > 0 ? ActiveImages[CurrentSlide] : string.Empty;
 
     // Settings panel
     private bool SettingsPanelOpen { get; set; }
@@ -99,6 +111,9 @@
 
     protected override async Task OnInitializedAsync()
     {
+        // Shuffle and set default paradise island images
+        _defaultImages = DefaultImages.OrderBy(_ => Random.Shared.Next()).ToList();
+
         // Load persisted target date
         var stored = await JS.InvokeAsync<string?>("localStorage.getItem", "targetDate");
         _targetDateStr = stored ?? DefaultTargetDate;
@@ -225,7 +240,7 @@
 
     private void StartSlideshowTimerIfNeeded()
     {
-        if (SlideshowImages.Count > 1 && _slideshowTimer == null)
+        if (ActiveImages.Count > 1 && _slideshowTimer == null)
         {
             _slideshowTimer = new Timer(SlideshowIntervalMs);
             _slideshowTimer.Elapsed += OnSlideshowTick;
@@ -243,22 +258,22 @@
 
     private void OnSlideshowTick(object? sender, ElapsedEventArgs e)
     {
-        CurrentSlide = (CurrentSlide + 1) % SlideshowImages.Count;
+        CurrentSlide = (CurrentSlide + 1) % ActiveImages.Count;
         InvokeAsync(StateHasChanged);
     }
 
     private void PrevSlide()
     {
-        if (SlideshowImages.Count == 0) return;
-        CurrentSlide = (CurrentSlide - 1 + SlideshowImages.Count) % SlideshowImages.Count;
+        var active = ActiveImages;
+        CurrentSlide = (CurrentSlide - 1 + active.Count) % active.Count;
         StopSlideshowTimer();
         StartSlideshowTimerIfNeeded();
     }
 
     private void NextSlide()
     {
-        if (SlideshowImages.Count == 0) return;
-        CurrentSlide = (CurrentSlide + 1) % SlideshowImages.Count;
+        var active = ActiveImages;
+        CurrentSlide = (CurrentSlide + 1) % active.Count;
         StopSlideshowTimer();
         StartSlideshowTimerIfNeeded();
     }
