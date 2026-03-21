@@ -1,0 +1,276 @@
+@page "/"
+@using System.Timers
+@implements IAsyncDisposable
+@inject IJSRuntime JS
+
+<PageTitle>Countdown to Us</PageTitle>
+
+<div class="container">
+    <h1>@CountdownTitle</h1>
+
+    <div class="image-container">
+        <img src="@CurrentImageSrc" alt="Photo of us together" class="us-image" />
+        @if (SlideshowImages.Count > 0)
+        {
+            <div class="slideshow-controls" style="display:@(SlideshowImages.Count > 1 ? "flex" : "none")">
+                <button class="slide-btn" @onclick="PrevSlide" aria-label="Previous image">&#8249;</button>
+                <span class="slide-indicator">@(CurrentSlide + 1) / @SlideshowImages.Count</span>
+                <button class="slide-btn" @onclick="NextSlide" aria-label="Next image">&#8250;</button>
+            </div>
+        }
+    </div>
+
+    <div class="countdown">
+        <div class="time-unit">
+            <span class="number">@Days</span>
+            <span class="label">Days</span>
+        </div>
+        <div class="time-unit">
+            <span class="number">@Hours.ToString("D2")</span>
+            <span class="label">Hours</span>
+        </div>
+        <div class="time-unit">
+            <span class="number">@Minutes.ToString("D2")</span>
+            <span class="label">Minutes</span>
+        </div>
+        <div class="time-unit">
+            <span class="number">@Seconds.ToString("D2")</span>
+            <span class="label">Seconds</span>
+        </div>
+    </div>
+
+    <div class="target-date">Target Date: @TargetDateDisplay</div>
+
+    <div class="settings-wrapper">
+        <button class="settings-toggle"
+                @onclick="ToggleSettings"
+                aria-expanded="@SettingsPanelOpen.ToString().ToLowerInvariant()"
+                aria-controls="settings-panel"
+                aria-label="Settings">&#9881;</button>
+
+        @if (SettingsPanelOpen)
+        {
+            <div class="settings-panel" id="settings-panel">
+                <h2>Settings</h2>
+                <div class="settings-group">
+                    <label for="target-date-input">Target Date &amp; Time</label>
+                    <input type="datetime-local" id="target-date-input"
+                           @bind="TargetDateInputValue" @bind:format="yyyy-MM-ddTHH:mm" />
+                    <button class="btn" @onclick="ApplyDate">Apply</button>
+                </div>
+                <div class="settings-group">
+                    <label for="photo-upload">Upload Photos (slideshow)</label>
+                    <InputFile id="photo-upload" accept="image/*" multiple OnChange="HandlePhotoUpload" />
+                    <button class="btn btn-danger" @onclick="ClearPhotos">Clear Photos</button>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private const string DefaultTargetDate = "2028-10-01T00:00:00";
+    private const string DefaultImageSrc = "us.jpg";
+    private const int SlideshowIntervalMs = 5000;
+
+    private string _targetDateStr = DefaultTargetDate;
+    private DateTime _targetDate;
+    private Timer? _countdownTimer;
+    private Timer? _slideshowTimer;
+
+    // Countdown values
+    private int Days { get; set; }
+    private int Hours { get; set; }
+    private int Minutes { get; set; }
+    private int Seconds { get; set; }
+
+    // Display strings
+    private string CountdownTitle => $"Countdown to {_targetDate:MMMM d, yyyy}";
+    private string TargetDateDisplay => _targetDate.ToString("MMMM d, yyyy 'at' hh:mm:ss tt");
+
+    // Slideshow
+    private List<string> SlideshowImages { get; set; } = new();
+    private int CurrentSlide { get; set; }
+    private string CurrentImageSrc => SlideshowImages.Count > 0 ? SlideshowImages[CurrentSlide] : DefaultImageSrc;
+
+    // Settings panel
+    private bool SettingsPanelOpen { get; set; }
+    private DateTime TargetDateInputValue { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Load persisted target date
+        var stored = await JS.InvokeAsync<string?>("localStorage.getItem", "targetDate");
+        _targetDateStr = stored ?? DefaultTargetDate;
+        _targetDate = DateTime.Parse(_targetDateStr);
+        TargetDateInputValue = _targetDate;
+
+        // Load persisted slideshow images
+        var imagesJson = await JS.InvokeAsync<string?>("localStorage.getItem", "slideshowImages");
+        if (!string.IsNullOrEmpty(imagesJson))
+        {
+            try
+            {
+                var images = System.Text.Json.JsonSerializer.Deserialize<List<string>>(imagesJson);
+                if (images != null) SlideshowImages = images;
+            }
+            catch { /* ignore corrupt data */ }
+        }
+
+        UpdateCountdown();
+
+        // Start 1-second countdown timer
+        _countdownTimer = new Timer(1000);
+        _countdownTimer.Elapsed += OnCountdownTick;
+        _countdownTimer.AutoReset = true;
+        _countdownTimer.Start();
+
+        // Start slideshow timer if needed
+        StartSlideshowTimerIfNeeded();
+    }
+
+    private void OnCountdownTick(object? sender, ElapsedEventArgs e)
+    {
+        UpdateCountdown();
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void UpdateCountdown()
+    {
+        var now = DateTime.Now;
+        var distance = _targetDate - now;
+
+        if (distance <= TimeSpan.Zero)
+        {
+            Days = Hours = Minutes = Seconds = 0;
+            return;
+        }
+
+        Days = (int)distance.TotalDays;
+        Hours = distance.Hours;
+        Minutes = distance.Minutes;
+        Seconds = distance.Seconds;
+    }
+
+    private void ToggleSettings()
+    {
+        SettingsPanelOpen = !SettingsPanelOpen;
+    }
+
+    private async Task ApplyDate()
+    {
+        if (TargetDateInputValue == default)
+        {
+            await JS.InvokeVoidAsync("alert", "Please select a date and time.");
+            return;
+        }
+        if (TargetDateInputValue <= DateTime.Now)
+        {
+            var ok = await JS.InvokeAsync<bool>("confirm",
+                "The selected date is in the past. The countdown will show all zeros. Continue?");
+            if (!ok) return;
+        }
+
+        _targetDate = TargetDateInputValue;
+        _targetDateStr = _targetDate.ToString("yyyy-MM-ddTHH:mm:ss");
+        await JS.InvokeVoidAsync("localStorage.setItem", "targetDate", _targetDateStr);
+        UpdateCountdown();
+    }
+
+    private async Task HandlePhotoUpload(InputFileChangeEventArgs e)
+    {
+        foreach (var file in e.GetMultipleFiles(50))
+        {
+            var buffer = new byte[file.Size];
+            await using var stream = file.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
+            var bytesRead = 0;
+            while (bytesRead < buffer.Length)
+            {
+                var read = await stream.ReadAsync(buffer, bytesRead, buffer.Length - bytesRead);
+                if (read == 0) break;
+                bytesRead += read;
+            }
+            var base64 = Convert.ToBase64String(buffer, 0, bytesRead);
+            var dataUrl = $"data:{file.ContentType};base64,{base64}";
+            SlideshowImages.Add(dataUrl);
+        }
+
+        CurrentSlide = 0;
+        StopSlideshowTimer();
+        StartSlideshowTimerIfNeeded();
+        await SaveSlideshowImages();
+    }
+
+    private async Task ClearPhotos()
+    {
+        SlideshowImages.Clear();
+        CurrentSlide = 0;
+        StopSlideshowTimer();
+        await JS.InvokeVoidAsync("localStorage.removeItem", "slideshowImages");
+    }
+
+    private async Task SaveSlideshowImages()
+    {
+        try
+        {
+            var json = System.Text.Json.JsonSerializer.Serialize(SlideshowImages);
+            await JS.InvokeVoidAsync("localStorage.setItem", "slideshowImages", json);
+        }
+        catch
+        {
+            await JS.InvokeVoidAsync("alert",
+                "Could not save images: storage limit may be exceeded. Try using fewer or smaller images.");
+        }
+    }
+
+    private void StartSlideshowTimerIfNeeded()
+    {
+        if (SlideshowImages.Count > 1 && _slideshowTimer == null)
+        {
+            _slideshowTimer = new Timer(SlideshowIntervalMs);
+            _slideshowTimer.Elapsed += OnSlideshowTick;
+            _slideshowTimer.AutoReset = true;
+            _slideshowTimer.Start();
+        }
+    }
+
+    private void StopSlideshowTimer()
+    {
+        _slideshowTimer?.Stop();
+        _slideshowTimer?.Dispose();
+        _slideshowTimer = null;
+    }
+
+    private void OnSlideshowTick(object? sender, ElapsedEventArgs e)
+    {
+        CurrentSlide = (CurrentSlide + 1) % SlideshowImages.Count;
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void PrevSlide()
+    {
+        if (SlideshowImages.Count == 0) return;
+        CurrentSlide = (CurrentSlide - 1 + SlideshowImages.Count) % SlideshowImages.Count;
+        StopSlideshowTimer();
+        StartSlideshowTimerIfNeeded();
+    }
+
+    private void NextSlide()
+    {
+        if (SlideshowImages.Count == 0) return;
+        CurrentSlide = (CurrentSlide + 1) % SlideshowImages.Count;
+        StopSlideshowTimer();
+        StartSlideshowTimerIfNeeded();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_countdownTimer != null)
+        {
+            _countdownTimer.Stop();
+            _countdownTimer.Dispose();
+        }
+        StopSlideshowTimer();
+        await ValueTask.CompletedTask;
+    }
+}
