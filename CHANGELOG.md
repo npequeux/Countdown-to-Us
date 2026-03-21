@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.3] - Paradise Island Release
+
+### Changed
+- Replaced the default `us.jpg` picture with a rotating slideshow of 10 free-to-use paradise island photos (Unsplash license)
+- Default photos are shuffled randomly on each page load for variety
+- Background image now updates dynamically alongside the slideshow
+- Navigation controls are always visible when using the default paradise island photos
+
+### Removed
+- Removed `us.jpg` as the default background/display image
+
 ## [v0.2] - Desktop Release
 
 ### Added

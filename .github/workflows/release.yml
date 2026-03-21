@@ -34,7 +34,7 @@ jobs:
       - name: Copy web files to www directory
         run: |
           mkdir -p www
-          cp index.html countdown.js style.css us.jpg www/
+          cp index.html countdown.js style.css www/
 
       - name: Sync Capacitor
         run: npx cap sync android
