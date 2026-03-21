@@ -1,0 +1,31 @@
+name: Create v0.2 Tag
+
+on:
+  workflow_dispatch:
+
+jobs:
+  create-tag:
+    name: Create v0.2 Git Tag
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check if v0.2 tag already exists
+        run: |
+          if git ls-remote --tags origin | grep -q "refs/tags/v0.2$"; then
+            echo "Tag v0.2 already exists — nothing to do."
+            exit 1
+          fi
+
+      - name: Create and push v0.2 tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag v0.2
+          git push origin v0.2
