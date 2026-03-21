@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.1.0] - Desktop Release
+## [v0.2] - Desktop Release
 
 ### Added
 - Windows desktop application via Electron (NSIS installer + portable executable)
@@ -21,7 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated `release.yml` to build Android, Windows, and Linux packages in parallel and attach all artifacts to GitHub releases
 - `electron-builder` configuration in `package.json` for NSIS installer, portable .exe, AppImage, and .deb
 
-## [1.0.0] - Initial Release
+## [v0.1] - Initial Release
 
 ### Added
 - Beautiful countdown timer to October 1, 2028
