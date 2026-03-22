@@ -115,7 +115,20 @@ jobs:
             echo "track=internal" >> $GITHUB_OUTPUT
           fi
 
+      - name: Check Play Store credentials
+        id: check_credentials
+        run: |
+          if [ -n "$SERVICE_ACCOUNT_JSON" ]; then
+            echo "available=true" >> $GITHUB_OUTPUT
+          else
+            echo "available=false" >> $GITHUB_OUTPUT
+            echo "::warning::GOOGLE_PLAY_SERVICE_ACCOUNT_JSON secret not set. Skipping Play Store upload."
+          fi
+        env:
+          SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
+
       - name: Upload AAB to Google Play
+        if: steps.check_credentials.outputs.available == 'true'
         uses: r0adkll/upload-google-play@v1
         with:
           serviceAccountJsonPlainText: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
@@ -126,6 +139,7 @@ jobs:
           status: completed
 
       - name: Upload AAB artifact
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: android-aab
