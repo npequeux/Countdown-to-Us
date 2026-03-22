@@ -1,0 +1,69 @@
+name: Download Paradise Island Photos
+
+on:
+  push:
+    branches:
+      - 'copilot/add-pardise-island-pictures'
+
+jobs:
+  download-photos:
+    name: Download real Unsplash paradise island photos
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check if real photos already exist
+        id: check
+        run: |
+          REAL=true
+          for i in $(seq 1 10); do
+            FILE="images/${i}.jpg"
+            SIZE=$(stat -c%s "$FILE" 2>/dev/null || echo 0)
+            if [ "$SIZE" -lt 200000 ]; then
+              REAL=false
+              echo "Image $FILE is missing or too small (${SIZE} bytes) — will download"
+              break
+            fi
+          done
+          echo "skip=$REAL" >> "$GITHUB_OUTPUT"
+
+      - name: Download 10 paradise island photos from Unsplash
+        if: steps.check.outputs.skip == 'false'
+        run: |
+          mkdir -p images www/images
+          PHOTOS=(
+            "photo-1506744038136-46273834b3fb"
+            "photo-1465101099481-8da6ee8aa37b"
+            "photo-1507525428034-b723cf961d3e"
+            "photo-1419242902214-272b3f66ee7a"
+            "photo-1468413253725-0d5181091126"
+            "photo-1502082553048-f009c37129b9"
+            "photo-1502086223501-7ea6ecd79368"
+            "photo-1465156799763-2c087c332922"
+            "photo-1464863979621-258859e62245"
+            "photo-1425321408019-291ac9529adc"
+          )
+          for i in "${!PHOTOS[@]}"; do
+            n=$((i + 1))
+            URL="https://images.unsplash.com/${PHOTOS[$i]}?auto=format&fit=crop&w=1920&q=80"
+            echo "Downloading image $n: $URL"
+            curl -L --max-time 60 -s "$URL" -o "images/${n}.jpg"
+            cp "images/${n}.jpg" "www/images/${n}.jpg"
+            SIZE=$(du -h "images/${n}.jpg" | cut -f1)
+            echo "  Saved images/${n}.jpg ($SIZE)"
+          done
+          ls -lh images/
+
+      - name: Commit and push real photos
+        if: steps.check.outputs.skip == 'false'
+        run: |
+          git config user.email "action@github.com"
+          git config user.name "GitHub Actions"
+          git add images/ www/images/
+          git diff --staged --quiet || \
+            git commit -m "chore: replace generated images with real Unsplash paradise island photos"
+          git push
