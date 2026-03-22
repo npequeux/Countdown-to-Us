@@ -1,9 +1,12 @@
 name: Download Paradise Island Photos
 
 on:
-  push:
-    branches:
-      - 'copilot/add-pardise-island-pictures'
+  workflow_dispatch:
+    inputs:
+      commit_message:
+        description: 'Commit message for the downloaded photos'
+        required: false
+        default: 'chore: bundle 10 paradise island photos locally from Unsplash'
 
 jobs:
   download-photos:
@@ -16,54 +19,57 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Check if real photos already exist
-        id: check
-        run: |
-          REAL=true
-          for i in $(seq 1 10); do
-            FILE="images/${i}.jpg"
-            SIZE=$(stat -c%s "$FILE" 2>/dev/null || echo 0)
-            if [ "$SIZE" -lt 200000 ]; then
-              REAL=false
-              echo "Image $FILE is missing or too small (${SIZE} bytes) — will download"
-              break
-            fi
-          done
-          echo "skip=$REAL" >> "$GITHUB_OUTPUT"
-
       - name: Download 10 paradise island photos from Unsplash
-        if: steps.check.outputs.skip == 'false'
         run: |
           mkdir -p images www/images
-          PHOTOS=(
-            "photo-1506744038136-46273834b3fb"
-            "photo-1465101099481-8da6ee8aa37b"
-            "photo-1507525428034-b723cf961d3e"
-            "photo-1419242902214-272b3f66ee7a"
-            "photo-1468413253725-0d5181091126"
-            "photo-1502082553048-f009c37129b9"
-            "photo-1502086223501-7ea6ecd79368"
-            "photo-1465156799763-2c087c332922"
-            "photo-1464863979621-258859e62245"
-            "photo-1425321408019-291ac9529adc"
+          declare -A PHOTOS=(
+            [1]="photo-1506744038136-46273834b3fb"
+            [2]="photo-1507525428034-b723cf961d3e"
+            [3]="photo-1465101099481-8da6ee8aa37b"
+            [4]="photo-1519046904884-53103b34b206"
+            [5]="photo-1499793983690-e29da59ef1c2"
+            [6]="photo-1471922694854-ff1b63b20054"
+            [7]="photo-1468413253725-0d5181091126"
+            [8]="photo-1559494007-9f5847c49d94"
+            [9]="photo-1548574505-5e239809ee19"
+            [10]="photo-1566438480900-0609be27a4be"
           )
-          for i in "${!PHOTOS[@]}"; do
-            n=$((i + 1))
-            URL="https://images.unsplash.com/${PHOTOS[$i]}?auto=format&fit=crop&w=1920&q=80"
+          for n in $(seq 1 10); do
+            ID="${PHOTOS[$n]}"
+            URL="https://images.unsplash.com/${ID}?auto=format&fit=crop&w=1920&q=80"
             echo "Downloading image $n: $URL"
             curl -L --max-time 60 -s "$URL" -o "images/${n}.jpg"
             cp "images/${n}.jpg" "www/images/${n}.jpg"
-            SIZE=$(du -h "images/${n}.jpg" | cut -f1)
-            echo "  Saved images/${n}.jpg ($SIZE)"
+            echo "  Saved images/${n}.jpg ($(du -h images/${n}.jpg | cut -f1))"
           done
           ls -lh images/
 
+      - name: Update countdown.js to use local image paths
+        run: |
+          python3 << 'PYEOF'
+          import re
+
+          with open('countdown.js', 'r') as f:
+              content = f.read()
+
+          entries = [f"    'images/{i}.jpg'" for i in range(1, 11)]
+          local_images = ',\n'.join(entries)
+          pattern = r"(// --- Slideshow ---\nconst DEFAULT_IMAGES = \[)[^]]*(\];)"
+          replacement = r"\g<1>\n" + local_images + r"\n\g<2>"
+          content = re.sub(pattern, replacement, content, flags=re.DOTALL)
+
+          with open('countdown.js', 'w') as f:
+              f.write(content)
+          print("Updated countdown.js with local image paths")
+          PYEOF
+
+          cp countdown.js www/countdown.js
+
       - name: Commit and push real photos
-        if: steps.check.outputs.skip == 'false'
         run: |
           git config user.email "action@github.com"
           git config user.name "GitHub Actions"
-          git add images/ www/images/
+          git add images/ www/images/ countdown.js www/countdown.js
           git diff --staged --quiet || \
-            git commit -m "chore: replace generated images with real Unsplash paradise island photos"
+            git commit -m "${{ github.event.inputs.commit_message }}"
           git push
