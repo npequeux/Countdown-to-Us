@@ -1,0 +1,75 @@
+name: Download Paradise Island Photos
+
+on:
+  workflow_dispatch:
+    inputs:
+      commit_message:
+        description: 'Commit message for the downloaded photos'
+        required: false
+        default: 'chore: bundle 10 paradise island photos locally from Unsplash'
+
+jobs:
+  download-photos:
+    name: Download real Unsplash paradise island photos
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download 10 paradise island photos from Unsplash
+        run: |
+          mkdir -p images www/images
+          declare -A PHOTOS=(
+            [1]="photo-1506744038136-46273834b3fb"
+            [2]="photo-1507525428034-b723cf961d3e"
+            [3]="photo-1465101099481-8da6ee8aa37b"
+            [4]="photo-1519046904884-53103b34b206"
+            [5]="photo-1499793983690-e29da59ef1c2"
+            [6]="photo-1471922694854-ff1b63b20054"
+            [7]="photo-1468413253725-0d5181091126"
+            [8]="photo-1559494007-9f5847c49d94"
+            [9]="photo-1548574505-5e239809ee19"
+            [10]="photo-1566438480900-0609be27a4be"
+          )
+          for n in $(seq 1 10); do
+            ID="${PHOTOS[$n]}"
+            URL="https://images.unsplash.com/${ID}?auto=format&fit=crop&w=1920&q=80"
+            echo "Downloading image $n: $URL"
+            curl -L --max-time 60 -s "$URL" -o "images/${n}.jpg"
+            cp "images/${n}.jpg" "www/images/${n}.jpg"
+            echo "  Saved images/${n}.jpg ($(du -h images/${n}.jpg | cut -f1))"
+          done
+          ls -lh images/
+
+      - name: Update countdown.js to use local image paths
+        run: |
+          python3 << 'PYEOF'
+          import re
+
+          with open('countdown.js', 'r') as f:
+              content = f.read()
+
+          entries = [f"    'images/{i}.jpg'" for i in range(1, 11)]
+          local_images = ',\n'.join(entries)
+          pattern = r"(// --- Slideshow ---\nconst DEFAULT_IMAGES = \[)[^]]*(\];)"
+          replacement = r"\g<1>\n" + local_images + r"\n\g<2>"
+          content = re.sub(pattern, replacement, content, flags=re.DOTALL)
+
+          with open('countdown.js', 'w') as f:
+              f.write(content)
+          print("Updated countdown.js with local image paths")
+          PYEOF
+
+          cp countdown.js www/countdown.js
+
+      - name: Commit and push real photos
+        run: |
+          git config user.email "action@github.com"
+          git config user.name "GitHub Actions"
+          git add images/ www/images/ countdown.js www/countdown.js
+          git diff --staged --quiet || \
+            git commit -m "${{ github.event.inputs.commit_message }}"
+          git push
