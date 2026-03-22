@@ -55,16 +55,16 @@ function updateCountdown() {
 
 // --- Slideshow ---
 const DEFAULT_IMAGES = [
-    'https://images.unsplash.com/photo-DbwYNr8RPbg?w=1920&auto=format&fit=crop&q=80',
-    'https://images.unsplash.com/photo-MVIMZX7IE6E?w=1920&auto=format&fit=crop&q=80',
-    'https://images.unsplash.com/photo-x6znObe0wEM?w=1920&auto=format&fit=crop&q=80',
-    'https://images.unsplash.com/photo-8manzosRGPE?w=1920&auto=format&fit=crop&q=80',
-    'https://images.unsplash.com/photo-SF07QMAK0yQ?w=1920&auto=format&fit=crop&q=80',
-    'https://images.unsplash.com/photo-3wylDrjxH-E?w=1920&auto=format&fit=crop&q=80',
-    'https://images.unsplash.com/photo-kd7YjxDc5iE?w=1920&auto=format&fit=crop&q=80',
-    'https://images.unsplash.com/photo-egxA6rjV2wc?w=1920&auto=format&fit=crop&q=80',
-    'https://images.unsplash.com/photo-U5rMrSI7Pn4?w=1920&auto=format&fit=crop&q=80',
-    'https://images.unsplash.com/photo-nO9yM-gZg7k?w=1920&auto=format&fit=crop&q=80'
+    'images/1.jpg',
+    'images/2.jpg',
+    'images/3.jpg',
+    'images/4.jpg',
+    'images/5.jpg',
+    'images/6.jpg',
+    'images/7.jpg',
+    'images/8.jpg',
+    'images/9.jpg',
+    'images/10.jpg'
 ];
 
 function shuffleArray(arr) {
