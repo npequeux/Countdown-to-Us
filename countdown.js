@@ -1,6 +1,110 @@
 // Default target date
 const DEFAULT_TARGET_DATE = '2028-10-01T00:00:00';
 
+// --- Translations ---
+const TRANSLATIONS = {
+    en: {
+        days: 'Days', hours: 'Hours', minutes: 'Minutes', seconds: 'Seconds',
+        settings: 'Settings',
+        language: 'Language',
+        targetDateLabel: 'Target Date & Time',
+        apply: 'Apply',
+        uploadPhotos: 'Upload Photos (slideshow)',
+        clearPhotos: 'Clear Photos',
+        targetDatePrefix: 'Target Date:',
+        countdownTo: 'Countdown to',
+        alertSelectDate: 'Please select a date and time.',
+        confirmPastDate: 'The selected date is in the past. The countdown will show all zeros. Continue?',
+        alertStorageError: 'Could not save images: storage limit may be exceeded. Try using fewer or smaller images.',
+        prevImage: 'Previous image',
+        nextImage: 'Next image',
+        locale: 'en-US'
+    },
+    fr: {
+        days: 'Jours', hours: 'Heures', minutes: 'Minutes', seconds: 'Secondes',
+        settings: 'Paramètres',
+        language: 'Langue',
+        targetDateLabel: 'Date et heure cible',
+        apply: 'Appliquer',
+        uploadPhotos: 'Télécharger des photos (diaporama)',
+        clearPhotos: 'Effacer les photos',
+        targetDatePrefix: 'Date cible :',
+        countdownTo: 'Compte à rebours jusqu\'au',
+        alertSelectDate: 'Veuillez sélectionner une date et une heure.',
+        confirmPastDate: 'La date sélectionnée est dans le passé. Le compte à rebours affichera zéro. Continuer ?',
+        alertStorageError: 'Impossible de sauvegarder les images : la limite de stockage est peut-être dépassée. Essayez avec moins d\'images ou des images plus petites.',
+        prevImage: 'Image précédente',
+        nextImage: 'Image suivante',
+        locale: 'fr-FR'
+    },
+    es: {
+        days: 'Días', hours: 'Horas', minutes: 'Minutos', seconds: 'Segundos',
+        settings: 'Configuración',
+        language: 'Idioma',
+        targetDateLabel: 'Fecha y hora objetivo',
+        apply: 'Aplicar',
+        uploadPhotos: 'Subir fotos (presentación)',
+        clearPhotos: 'Borrar fotos',
+        targetDatePrefix: 'Fecha objetivo:',
+        countdownTo: 'Cuenta regresiva hasta el',
+        alertSelectDate: 'Por favor selecciona una fecha y hora.',
+        confirmPastDate: 'La fecha seleccionada está en el pasado. La cuenta regresiva mostrará ceros. ¿Continuar?',
+        alertStorageError: 'No se pudieron guardar las imágenes: puede que se haya superado el límite de almacenamiento. Intenta con menos imágenes o imágenes más pequeñas.',
+        prevImage: 'Imagen anterior',
+        nextImage: 'Imagen siguiente',
+        locale: 'es-ES'
+    },
+    zh: {
+        days: '天', hours: '小时', minutes: '分钟', seconds: '秒',
+        settings: '设置',
+        language: '语言',
+        targetDateLabel: '目标日期和时间',
+        apply: '应用',
+        uploadPhotos: '上传照片（幻灯片）',
+        clearPhotos: '清除照片',
+        targetDatePrefix: '目标日期：',
+        countdownTo: '倒计时至',
+        alertSelectDate: '请选择日期和时间。',
+        confirmPastDate: '所选日期已过去，倒计时将显示零。是否继续？',
+        alertStorageError: '无法保存图片：可能超出了存储限制。请尝试使用更少或更小的图片。',
+        prevImage: '上一张',
+        nextImage: '下一张',
+        locale: 'zh-CN'
+    }
+};
+
+function loadLanguage() {
+    return localStorage.getItem('language') || 'en';
+}
+
+function saveLanguage(lang) {
+    localStorage.setItem('language', lang);
+}
+
+let currentLang = loadLanguage();
+
+function t(key) {
+    return (TRANSLATIONS[currentLang]?.[key]) || TRANSLATIONS['en'][key] || key;
+}
+
+function applyTranslations() {
+    document.getElementById('html-root').setAttribute('lang', t('locale').split('-')[0]);
+    document.getElementById('label-days').textContent = t('days');
+    document.getElementById('label-hours').textContent = t('hours');
+    document.getElementById('label-minutes').textContent = t('minutes');
+    document.getElementById('label-seconds').textContent = t('seconds');
+    document.getElementById('settings-title').textContent = t('settings');
+    document.getElementById('language-label').textContent = t('language');
+    document.getElementById('target-date-label').textContent = t('targetDateLabel');
+    document.getElementById('apply-date-btn').textContent = t('apply');
+    document.getElementById('upload-photos-label').textContent = t('uploadPhotos');
+    document.getElementById('clear-photos-btn').textContent = t('clearPhotos');
+    document.getElementById('settings-toggle').setAttribute('aria-label', t('settings'));
+    document.getElementById('prev-btn').setAttribute('aria-label', t('prevImage'));
+    document.getElementById('next-btn').setAttribute('aria-label', t('nextImage'));
+    updateDateDisplay();
+}
+
 // --- Target date ---
 function loadTargetDate() {
     return localStorage.getItem('targetDate') || DEFAULT_TARGET_DATE;
@@ -12,7 +116,7 @@ function saveTargetDate(dateStr) {
 
 function formatDateDisplay(dateStr) {
     const d = new Date(dateStr);
-    return d.toLocaleString('en-US', {
+    return d.toLocaleString(t('locale'), {
         year: 'numeric', month: 'long', day: 'numeric',
         hour: '2-digit', minute: '2-digit', second: '2-digit'
     });
@@ -25,8 +129,8 @@ function updateDateDisplay() {
     const display = document.getElementById('target-date-display');
     const title = document.getElementById('countdown-title');
     const formatted = formatDateDisplay(targetDateStr);
-    display.textContent = 'Target Date: ' + formatted;
-    title.textContent = 'Countdown to ' + new Date(targetDateStr).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    display.textContent = t('targetDatePrefix') + ' ' + formatted;
+    title.textContent = t('countdownTo') + ' ' + new Date(targetDateStr).toLocaleDateString(t('locale'), { year: 'numeric', month: 'long', day: 'numeric' });
 }
 
 // --- Countdown ---
@@ -96,7 +200,7 @@ function saveSlideshowImages(images) {
     try {
         localStorage.setItem('slideshowImages', JSON.stringify(images));
     } catch (e) {
-        alert('Could not save images: storage limit may be exceeded. Try using fewer or smaller images.');
+        alert(t('alertStorageError'));
     }
 }
 
@@ -149,9 +253,9 @@ document.getElementById('settings-toggle').addEventListener('click', function() 
 
 document.getElementById('apply-date-btn').addEventListener('click', function() {
     const input = document.getElementById('target-date-input').value;
-    if (!input) { alert('Please select a date and time.'); return; }
+    if (!input) { alert(t('alertSelectDate')); return; }
     if (new Date(input).getTime() <= Date.now()) {
-        if (!confirm('The selected date is in the past. The countdown will show all zeros. Continue?')) return;
+        if (!confirm(t('confirmPastDate'))) return;
     }
     targetDateStr = input;
     targetDate = new Date(targetDateStr).getTime();
@@ -199,14 +303,23 @@ document.getElementById('next-btn').addEventListener('click', function() {
     navigateToSlide(currentSlide + 1);
 });
 
+document.getElementById('language-select').addEventListener('change', function() {
+    currentLang = this.value;
+    saveLanguage(currentLang);
+    applyTranslations();
+});
+
 // --- Init ---
 (function init() {
+    // Set language selector to stored value
+    document.getElementById('language-select').value = currentLang;
+
     // Pre-fill date input with stored value
     const inputEl = document.getElementById('target-date-input');
     // datetime-local value format: YYYY-MM-DDTHH:MM
     inputEl.value = targetDateStr.slice(0, 16);
 
-    updateDateDisplay();
+    applyTranslations();
     updateCountdown();
     setInterval(updateCountdown, 1000);
 
