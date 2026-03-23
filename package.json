@@ -19,13 +19,17 @@
     "appId": "com.npequeux.countdown-to-us",
     "productName": "Countdown to Us",
     "copyright": "Copyright © 2024 npequeux",
+    "icon": "build/icon.png",
     "files": [
       "index.html",
       "countdown.js",
       "style.css",
-      "electron/main.js"
+      "electron/main.js",
+      "build/icon.png",
+      "build/icon.ico"
     ],
     "win": {
+      "icon": "build/icon.ico",
       "target": [
         {
           "target": "nsis",
@@ -38,6 +42,7 @@
       ]
     },
     "linux": {
+      "icon": "build/icon.png",
       "target": [
         {
           "target": "AppImage",
