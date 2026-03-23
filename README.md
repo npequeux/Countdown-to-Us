@@ -6,6 +6,18 @@
 
 A beautiful countdown timer displaying the time remaining until October 1, 2028. Available as a web application, a native Android app, and desktop apps for Windows and Linux.
 
+## 📱 Get the App
+
+| Platform | Download |
+|---|---|
+| 🤖 Android (APK) | [![Download APK](https://img.shields.io/github/v/release/npequeux/Countdown-to-Us?label=Download%20APK&color=green)](https://github.com/npequeux/Countdown-to-Us/releases/latest) |
+| 🪟 Windows | [![Download Windows](https://img.shields.io/github/v/release/npequeux/Countdown-to-Us?label=Download%20Windows&color=blue)](https://github.com/npequeux/Countdown-to-Us/releases/latest) |
+| 🐧 Linux | [![Download Linux](https://img.shields.io/github/v/release/npequeux/Countdown-to-Us?label=Download%20Linux&color=orange)](https://github.com/npequeux/Countdown-to-Us/releases/latest) |
+| 🌐 Web | [Open in Browser](https://npequeux.github.io/Countdown-to-Us/) |
+
+> **Looking for Countdown to Us on the Google Play Store?**
+> The app is not yet listed on the Google Play Store. You can install it directly on any Android device by downloading the APK from the [latest GitHub Release](https://github.com/npequeux/Countdown-to-Us/releases/latest). See the [Installing the APK on Android Devices](#installing-the-apk-on-android-devices) section below for step-by-step instructions.
+
 ## Features
 
 - Real-time countdown display showing days, hours, minutes, and seconds
