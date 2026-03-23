@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" id="html-root">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -20,19 +20,19 @@
         <div class="countdown">
             <div class="time-unit">
                 <span class="number" id="days">0</span>
-                <span class="label">Days</span>
+                <span class="label" id="label-days">Days</span>
             </div>
             <div class="time-unit">
                 <span class="number" id="hours">0</span>
-                <span class="label">Hours</span>
+                <span class="label" id="label-hours">Hours</span>
             </div>
             <div class="time-unit">
                 <span class="number" id="minutes">0</span>
-                <span class="label">Minutes</span>
+                <span class="label" id="label-minutes">Minutes</span>
             </div>
             <div class="time-unit">
                 <span class="number" id="seconds">0</span>
-                <span class="label">Seconds</span>
+                <span class="label" id="label-seconds">Seconds</span>
             </div>
         </div>
         <div class="target-date" id="target-date-display">
@@ -41,14 +41,23 @@
         <div class="settings-wrapper">
             <button class="settings-toggle" id="settings-toggle" aria-expanded="false" aria-controls="settings-panel" aria-label="Settings">&#9881;</button>
             <div class="settings-panel" id="settings-panel" hidden>
-                <h2>Settings</h2>
+                <h2 id="settings-title">Settings</h2>
                 <div class="settings-group">
-                    <label for="target-date-input">Target Date &amp; Time</label>
+                    <label for="language-select" id="language-label">Language</label>
+                    <select id="language-select">
+                        <option value="en">English</option>
+                        <option value="fr">Français</option>
+                        <option value="es">Español</option>
+                        <option value="zh">中文</option>
+                    </select>
+                </div>
+                <div class="settings-group">
+                    <label for="target-date-input" id="target-date-label">Target Date &amp; Time</label>
                     <input type="datetime-local" id="target-date-input">
                     <button class="btn" id="apply-date-btn">Apply</button>
                 </div>
                 <div class="settings-group">
-                    <label for="photo-upload">Upload Photos (slideshow)</label>
+                    <label for="photo-upload" id="upload-photos-label">Upload Photos (slideshow)</label>
                     <input type="file" id="photo-upload" accept="image/*" multiple>
                     <button class="btn btn-danger" id="clear-photos-btn">Clear Photos</button>
                 </div>
