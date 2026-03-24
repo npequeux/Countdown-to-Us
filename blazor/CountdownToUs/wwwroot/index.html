@@ -7,7 +7,6 @@
     <title>Countdown to Us</title>
     <base href="/" />
     <link rel="preload" id="webassembly" />
-    <link rel="stylesheet" href="lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="css/app.css" />
     <link rel="icon" type="image/png" href="favicon.png" />
     <link href="CountdownToUs.styles.css" rel="stylesheet" />
@@ -29,6 +28,14 @@
         <span class="dismiss">🗙</span>
     </div>
     <script src="_framework/blazor.webassembly#[.{fingerprint}].js"></script>
+    <script>
+        window.setBodyBackground = function (url) {
+            document.body.style.backgroundImage = 'url("' + url.replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '")';
+        };
+        window.setHtmlLang = function (lang) {
+            document.documentElement.setAttribute('lang', lang);
+        };
+    </script>
 </body>
 
 </html>

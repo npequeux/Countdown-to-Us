@@ -12,54 +12,63 @@
     <div class="image-container">
         <img src="@CurrentImageSrc" alt="Paradise island" class="us-image" />
         <div class="slideshow-controls" style="display:@(ActiveImages.Count > 1 ? "flex" : "none")">
-            <button class="slide-btn" @onclick="PrevSlide" aria-label="Previous image">&#8249;</button>
+            <button class="slide-btn" @onclick="PrevSlide" aria-label="@T("prevImage")">&#8249;</button>
             <span class="slide-indicator">@(CurrentSlide + 1) / @ActiveImages.Count</span>
-            <button class="slide-btn" @onclick="NextSlide" aria-label="Next image">&#8250;</button>
+            <button class="slide-btn" @onclick="NextSlide" aria-label="@T("nextImage")">&#8250;</button>
         </div>
     </div>
 
     <div class="countdown">
         <div class="time-unit">
             <span class="number">@Days</span>
-            <span class="label">Days</span>
+            <span class="label">@T("days")</span>
         </div>
         <div class="time-unit">
             <span class="number">@Hours.ToString("D2")</span>
-            <span class="label">Hours</span>
+            <span class="label">@T("hours")</span>
         </div>
         <div class="time-unit">
             <span class="number">@Minutes.ToString("D2")</span>
-            <span class="label">Minutes</span>
+            <span class="label">@T("minutes")</span>
         </div>
         <div class="time-unit">
             <span class="number">@Seconds.ToString("D2")</span>
-            <span class="label">Seconds</span>
+            <span class="label">@T("seconds")</span>
         </div>
     </div>
 
-    <div class="target-date">Target Date: @TargetDateDisplay</div>
+    <div class="target-date">@TargetDateDisplay</div>
 
     <div class="settings-wrapper">
         <button class="settings-toggle"
                 @onclick="ToggleSettings"
                 aria-expanded="@SettingsPanelOpen.ToString().ToLowerInvariant()"
                 aria-controls="settings-panel"
-                aria-label="Settings">&#9881;</button>
+                aria-label="@T("settings")">&#9881;</button>
 
         @if (SettingsPanelOpen)
         {
             <div class="settings-panel" id="settings-panel">
-                <h2>Settings</h2>
+                <h2>@T("settings")</h2>
                 <div class="settings-group">
-                    <label for="target-date-input">Target Date &amp; Time</label>
-                    <input type="datetime-local" id="target-date-input"
-                           @bind="TargetDateInputValue" @bind:format="yyyy-MM-ddTHH:mm" />
-                    <button class="btn" @onclick="ApplyDate">Apply</button>
+                    <label for="language-select">@T("language")</label>
+                    <select id="language-select" @bind="_currentLang" @bind:after="OnLanguageChanged">
+                        <option value="en">English</option>
+                        <option value="fr">Français</option>
+                        <option value="es">Español</option>
+                        <option value="zh">中文</option>
+                    </select>
                 </div>
                 <div class="settings-group">
-                    <label for="photo-upload">Upload Photos (slideshow)</label>
+                    <label for="target-date-input">@T("targetDateLabel")</label>
+                    <input type="datetime-local" id="target-date-input"
+                           @bind="TargetDateInputValue" @bind:format="yyyy-MM-ddTHH:mm" />
+                    <button class="btn" @onclick="ApplyDate">@T("apply")</button>
+                </div>
+                <div class="settings-group">
+                    <label for="photo-upload">@T("uploadPhotos")</label>
                     <InputFile id="photo-upload" accept="image/*" multiple OnChange="HandlePhotoUpload" />
-                    <button class="btn btn-danger" @onclick="ClearPhotos">Clear Photos</button>
+                    <button class="btn btn-danger" @onclick="ClearPhotos">@T("clearPhotos")</button>
                 </div>
             </div>
         }
@@ -83,6 +92,96 @@
     };
     private const int SlideshowIntervalMs = 5000;
 
+    // --- Translations ---
+    private static readonly Dictionary<string, Dictionary<string, string>> Translations = new()
+    {
+        ["en"] = new()
+        {
+            ["days"] = "Days", ["hours"] = "Hours", ["minutes"] = "Minutes", ["seconds"] = "Seconds",
+            ["settings"] = "Settings",
+            ["language"] = "Language",
+            ["targetDateLabel"] = "Target Date & Time",
+            ["apply"] = "Apply",
+            ["uploadPhotos"] = "Upload Photos (slideshow)",
+            ["clearPhotos"] = "Clear Photos",
+            ["targetDatePrefix"] = "Target Date:",
+            ["countdownTo"] = "Countdown to",
+            ["alertSelectDate"] = "Please select a date and time.",
+            ["confirmPastDate"] = "The selected date is in the past. The countdown will show all zeros. Continue?",
+            ["alertStorageError"] = "Could not save images: storage limit may be exceeded. Try using fewer or smaller images.",
+            ["prevImage"] = "Previous image",
+            ["nextImage"] = "Next image",
+            ["locale"] = "en-US"
+        },
+        ["fr"] = new()
+        {
+            ["days"] = "Jours", ["hours"] = "Heures", ["minutes"] = "Minutes", ["seconds"] = "Secondes",
+            ["settings"] = "Paramètres",
+            ["language"] = "Langue",
+            ["targetDateLabel"] = "Date et heure cible",
+            ["apply"] = "Appliquer",
+            ["uploadPhotos"] = "Télécharger des photos (diaporama)",
+            ["clearPhotos"] = "Effacer les photos",
+            ["targetDatePrefix"] = "Date cible :",
+            ["countdownTo"] = "Compte à rebours jusqu'au",
+            ["alertSelectDate"] = "Veuillez sélectionner une date et une heure.",
+            ["confirmPastDate"] = "La date sélectionnée est dans le passé. Le compte à rebours affichera zéro. Continuer ?",
+            ["alertStorageError"] = "Impossible de sauvegarder les images : la limite de stockage est peut-être dépassée. Essayez avec moins d'images ou des images plus petites.",
+            ["prevImage"] = "Image précédente",
+            ["nextImage"] = "Image suivante",
+            ["locale"] = "fr-FR"
+        },
+        ["es"] = new()
+        {
+            ["days"] = "Días", ["hours"] = "Horas", ["minutes"] = "Minutos", ["seconds"] = "Segundos",
+            ["settings"] = "Configuración",
+            ["language"] = "Idioma",
+            ["targetDateLabel"] = "Fecha y hora objetivo",
+            ["apply"] = "Aplicar",
+            ["uploadPhotos"] = "Subir fotos (presentación)",
+            ["clearPhotos"] = "Borrar fotos",
+            ["targetDatePrefix"] = "Fecha objetivo:",
+            ["countdownTo"] = "Cuenta regresiva hasta el",
+            ["alertSelectDate"] = "Por favor selecciona una fecha y hora.",
+            ["confirmPastDate"] = "La fecha seleccionada está en el pasado. La cuenta regresiva mostrará ceros. ¿Continuar?",
+            ["alertStorageError"] = "No se pudieron guardar las imágenes: puede que se haya superado el límite de almacenamiento. Intenta con menos imágenes o imágenes más pequeñas.",
+            ["prevImage"] = "Imagen anterior",
+            ["nextImage"] = "Imagen siguiente",
+            ["locale"] = "es-ES"
+        },
+        ["zh"] = new()
+        {
+            ["days"] = "天", ["hours"] = "小时", ["minutes"] = "分钟", ["seconds"] = "秒",
+            ["settings"] = "设置",
+            ["language"] = "语言",
+            ["targetDateLabel"] = "目标日期和时间",
+            ["apply"] = "应用",
+            ["uploadPhotos"] = "上传照片（幻灯片）",
+            ["clearPhotos"] = "清除照片",
+            ["targetDatePrefix"] = "目标日期：",
+            ["countdownTo"] = "倒计时至",
+            ["alertSelectDate"] = "请选择日期和时间。",
+            ["confirmPastDate"] = "所选日期已过去，倒计时将显示零。是否继续？",
+            ["alertStorageError"] = "无法保存图片：可能超出了存储限制。请尝试使用更少或更小的图片。",
+            ["prevImage"] = "上一张",
+            ["nextImage"] = "下一张",
+            ["locale"] = "zh-CN"
+        }
+    };
+
+    private string _currentLang = "en";
+    private System.Globalization.CultureInfo _currentCulture = System.Globalization.CultureInfo.CreateSpecificCulture("en-US");
+    private string _lastBackgroundUrl = string.Empty;
+
+    private string T(string key)
+    {
+        if (Translations.TryGetValue(_currentLang, out var dict) && dict.TryGetValue(key, out var val))
+            return val;
+        if (Translations.TryGetValue("en", out var enDict) && enDict.TryGetValue(key, out var fallback))
+            return fallback;
+        return key;
+    }
+
     private string _targetDateStr = DefaultTargetDate;
     private DateTime _targetDate;
     private Timer? _countdownTimer;
@@ -95,8 +194,8 @@
     private int Seconds { get; set; }
 
     // Display strings
-    private string CountdownTitle => $"Countdown to {_targetDate:MMMM d, yyyy}";
-    private string TargetDateDisplay => _targetDate.ToString("MMMM d, yyyy 'at' hh:mm:ss tt");
+    private string CountdownTitle => $"{T("countdownTo")} {_targetDate.ToString("MMMM d, yyyy", _currentCulture)}";
+    private string TargetDateDisplay => $"{T("targetDatePrefix")} {_targetDate.ToString("MMMM d, yyyy 'at' hh:mm:ss tt", _currentCulture)}";
 
     // Slideshow
     private List<string> _defaultImages = new();
@@ -113,6 +212,12 @@
     {
         // Shuffle and set default paradise island images
         _defaultImages = DefaultImages.OrderBy(_ => Random.Shared.Next()).ToList();
+
+        // Load persisted language
+        var storedLang = await JS.InvokeAsync<string?>("localStorage.getItem", "language");
+        if (!string.IsNullOrEmpty(storedLang) && Translations.ContainsKey(storedLang))
+            _currentLang = storedLang;
+        _currentCulture = CreateCulture(_currentLang);
 
         // Load persisted target date
         var stored = await JS.InvokeAsync<string?>("localStorage.getItem", "targetDate");
@@ -144,6 +249,18 @@
         StartSlideshowTimerIfNeeded();
     }
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+            await JS.InvokeVoidAsync("setHtmlLang", T("locale").Split('-')[0]);
+        var url = CurrentImageSrc;
+        if (!string.IsNullOrEmpty(url) && url != _lastBackgroundUrl)
+        {
+            _lastBackgroundUrl = url;
+            await JS.InvokeVoidAsync("setBodyBackground", url);
+        }
+    }
+
     private void OnCountdownTick(object? sender, ElapsedEventArgs e)
     {
         UpdateCountdown();
@@ -172,17 +289,37 @@
         SettingsPanelOpen = !SettingsPanelOpen;
     }
 
+    private async Task OnLanguageChanged()
+    {
+        _currentCulture = CreateCulture(_currentLang);
+        await JS.InvokeVoidAsync("localStorage.setItem", "language", _currentLang);
+        await JS.InvokeVoidAsync("setHtmlLang", T("locale").Split('-')[0]);
+    }
+
+    private static System.Globalization.CultureInfo CreateCulture(string lang)
+    {
+        try
+        {
+            return Translations.TryGetValue(lang, out var dict) && dict.TryGetValue("locale", out var locale)
+                ? System.Globalization.CultureInfo.CreateSpecificCulture(locale)
+                : System.Globalization.CultureInfo.InvariantCulture;
+        }
+        catch
+        {
+            return System.Globalization.CultureInfo.InvariantCulture;
+        }
+    }
+
     private async Task ApplyDate()
     {
         if (TargetDateInputValue == default)
         {
-            await JS.InvokeVoidAsync("alert", "Please select a date and time.");
+            await JS.InvokeVoidAsync("alert", T("alertSelectDate"));
             return;
         }
         if (TargetDateInputValue <= DateTime.Now)
         {
-            var ok = await JS.InvokeAsync<bool>("confirm",
-                "The selected date is in the past. The countdown will show all zeros. Continue?");
+            var ok = await JS.InvokeAsync<bool>("confirm", T("confirmPastDate"));
             if (!ok) return;
         }
 
@@ -233,8 +370,7 @@
         }
         catch
         {
-            await JS.InvokeVoidAsync("alert",
-                "Could not save images: storage limit may be exceeded. Try using fewer or smaller images.");
+            await JS.InvokeVoidAsync("alert", T("alertStorageError"));
         }
     }
 
