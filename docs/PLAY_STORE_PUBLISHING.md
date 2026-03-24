@@ -127,10 +127,24 @@ Choose one of the following tracks for your first upload:
 
 ## Step 7 – Automate with GitHub Actions
 
-This repository includes a workflow at `.github/workflows/play-store-publish.yml` that:
+This repository uses two complementary workflows for releasing the app:
 
-1. Builds a signed AAB using your production keystore stored as GitHub Secrets
-2. Uploads the AAB to Google Play via the [upload-google-play](https://github.com/r0adkll/upload-google-play) action
+- **`auto-release.yml`** – Triggered automatically on every merge to `master`/`main`. It builds all platform artifacts (APK, AAB, Linux, Windows), creates a GitHub Release, and pushes a version tag.
+- **`play-store-publish.yml`** – Triggered automatically whenever a version tag (e.g. `v1.2.0`) is pushed (including by `auto-release.yml`). It builds a production-signed AAB and uploads it to Google Play.
+
+> **Important**: The `play-store-publish.yml` workflow will **fail with a clear error** if `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` is configured but the production keystore secrets (`KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD`) are missing — a debug-signed AAB cannot be published to Google Play. If no Play Store credentials are configured at all, the workflow skips the upload with a warning and succeeds (useful for forks and testing).
+
+### Required GitHub Secrets
+
+| Secret name                       | Purpose                                                   |
+|-----------------------------------|-----------------------------------------------------------|
+| `KEYSTORE_BASE64`                 | Base64-encoded production keystore (required for signing) |
+| `KEYSTORE_PASSWORD`               | Keystore password                                         |
+| `KEY_ALIAS`                       | Key alias                                                 |
+| `KEY_PASSWORD`                    | Key password                                              |
+| `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON`| Google Play service account JSON (required for upload)    |
+
+All five secrets must be configured together for automated Play Store publishing to work.
 
 ### Additional Setup for the Automated Workflow
 
@@ -151,7 +165,9 @@ You need a **Google Play Service Account** with the *Release manager* role:
 
 ### Triggering the Workflow
 
-Push a version tag to trigger an automatic Play Store release:
+**Automatically**: Every merge to `master`/`main` triggers `auto-release.yml`, which builds and releases all artifacts and then pushes a version tag that automatically triggers `play-store-publish.yml`.
+
+**Manually**: Push a version tag or use the manual workflow dispatch:
 
 ```bash
 git tag v1.2.0
