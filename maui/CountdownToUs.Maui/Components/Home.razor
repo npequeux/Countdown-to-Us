@@ -1,0 +1,427 @@
+@page "/"
+@using System.Timers
+@using System.Linq
+@implements IAsyncDisposable
+@inject IJSRuntime JS
+
+<PageTitle>Countdown to Us</PageTitle>
+
+<div class="container">
+    <h1>@CountdownTitle</h1>
+
+    <div class="image-container">
+        <img src="@CurrentImageSrc" alt="Paradise island" class="us-image" />
+        <div class="slideshow-controls" style="display:@(ActiveImages.Count > 1 ? "flex" : "none")">
+            <button class="slide-btn" @onclick="PrevSlide" aria-label="@T("prevImage")">&#8249;</button>
+            <span class="slide-indicator">@(CurrentSlide + 1) / @ActiveImages.Count</span>
+            <button class="slide-btn" @onclick="NextSlide" aria-label="@T("nextImage")">&#8250;</button>
+        </div>
+    </div>
+
+    <div class="countdown">
+        <div class="time-unit">
+            <span class="number">@Days</span>
+            <span class="label">@T("days")</span>
+        </div>
+        <div class="time-unit">
+            <span class="number">@Hours.ToString("D2")</span>
+            <span class="label">@T("hours")</span>
+        </div>
+        <div class="time-unit">
+            <span class="number">@Minutes.ToString("D2")</span>
+            <span class="label">@T("minutes")</span>
+        </div>
+        <div class="time-unit">
+            <span class="number">@Seconds.ToString("D2")</span>
+            <span class="label">@T("seconds")</span>
+        </div>
+    </div>
+
+    <div class="target-date">@TargetDateDisplay</div>
+
+    <div class="settings-wrapper">
+        <button class="settings-toggle"
+                @onclick="ToggleSettings"
+                aria-expanded="@SettingsPanelOpen.ToString().ToLowerInvariant()"
+                aria-controls="settings-panel"
+                aria-label="@T("settings")">&#9881;</button>
+
+        @if (SettingsPanelOpen)
+        {
+            <div class="settings-panel" id="settings-panel">
+                <h2>@T("settings")</h2>
+                <div class="settings-group">
+                    <label for="language-select">@T("language")</label>
+                    <select id="language-select" @bind="_currentLang" @bind:after="OnLanguageChanged">
+                        <option value="en">English</option>
+                        <option value="fr">Français</option>
+                        <option value="es">Español</option>
+                        <option value="zh">中文</option>
+                    </select>
+                </div>
+                <div class="settings-group">
+                    <label for="target-date-input">@T("targetDateLabel")</label>
+                    <input type="datetime-local" id="target-date-input"
+                           @bind="TargetDateInputValue" @bind:format="yyyy-MM-ddTHH:mm" />
+                    <button class="btn" @onclick="ApplyDate">@T("apply")</button>
+                </div>
+                <div class="settings-group">
+                    <label for="photo-upload">@T("uploadPhotos")</label>
+                    <InputFile id="photo-upload" accept="image/*" multiple OnChange="HandlePhotoUpload" />
+                    <button class="btn btn-danger" @onclick="ClearPhotos">@T("clearPhotos")</button>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private const string DefaultTargetDate = "2028-10-01T00:00:00";
+    private static readonly string[] DefaultImages = new[]
+    {
+        "https://images.unsplash.com/photo-DbwYNr8RPbg?w=1920&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-MVIMZX7IE6E?w=1920&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-x6znObe0wEM?w=1920&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-8manzosRGPE?w=1920&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-SF07QMAK0yQ?w=1920&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-3wylDrjxH-E?w=1920&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-kd7YjxDc5iE?w=1920&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-egxA6rjV2wc?w=1920&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-U5rMrSI7Pn4?w=1920&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-nO9yM-gZg7k?w=1920&auto=format&fit=crop&q=80"
+    };
+    private const int SlideshowIntervalMs = 5000;
+
+    // --- Translations ---
+    private static readonly Dictionary<string, Dictionary<string, string>> Translations = new()
+    {
+        ["en"] = new()
+        {
+            ["days"] = "Days", ["hours"] = "Hours", ["minutes"] = "Minutes", ["seconds"] = "Seconds",
+            ["settings"] = "Settings",
+            ["language"] = "Language",
+            ["targetDateLabel"] = "Target Date & Time",
+            ["apply"] = "Apply",
+            ["uploadPhotos"] = "Upload Photos (slideshow)",
+            ["clearPhotos"] = "Clear Photos",
+            ["targetDatePrefix"] = "Target Date:",
+            ["countdownTo"] = "Countdown to",
+            ["alertSelectDate"] = "Please select a date and time.",
+            ["confirmPastDate"] = "The selected date is in the past. The countdown will show all zeros. Continue?",
+            ["alertStorageError"] = "Could not save images: storage limit may be exceeded. Try using fewer or smaller images.",
+            ["prevImage"] = "Previous image",
+            ["nextImage"] = "Next image",
+            ["locale"] = "en-US"
+        },
+        ["fr"] = new()
+        {
+            ["days"] = "Jours", ["hours"] = "Heures", ["minutes"] = "Minutes", ["seconds"] = "Secondes",
+            ["settings"] = "Paramètres",
+            ["language"] = "Langue",
+            ["targetDateLabel"] = "Date et heure cible",
+            ["apply"] = "Appliquer",
+            ["uploadPhotos"] = "Télécharger des photos (diaporama)",
+            ["clearPhotos"] = "Effacer les photos",
+            ["targetDatePrefix"] = "Date cible :",
+            ["countdownTo"] = "Compte à rebours jusqu'au",
+            ["alertSelectDate"] = "Veuillez sélectionner une date et une heure.",
+            ["confirmPastDate"] = "La date sélectionnée est dans le passé. Le compte à rebours affichera zéro. Continuer ?",
+            ["alertStorageError"] = "Impossible de sauvegarder les images : la limite de stockage est peut-être dépassée. Essayez avec moins d'images ou des images plus petites.",
+            ["prevImage"] = "Image précédente",
+            ["nextImage"] = "Image suivante",
+            ["locale"] = "fr-FR"
+        },
+        ["es"] = new()
+        {
+            ["days"] = "Días", ["hours"] = "Horas", ["minutes"] = "Minutos", ["seconds"] = "Segundos",
+            ["settings"] = "Configuración",
+            ["language"] = "Idioma",
+            ["targetDateLabel"] = "Fecha y hora objetivo",
+            ["apply"] = "Aplicar",
+            ["uploadPhotos"] = "Subir fotos (presentación)",
+            ["clearPhotos"] = "Borrar fotos",
+            ["targetDatePrefix"] = "Fecha objetivo:",
+            ["countdownTo"] = "Cuenta regresiva hasta el",
+            ["alertSelectDate"] = "Por favor selecciona una fecha y hora.",
+            ["confirmPastDate"] = "La fecha seleccionada está en el pasado. La cuenta regresiva mostrará ceros. ¿Continuar?",
+            ["alertStorageError"] = "No se pudieron guardar las imágenes: puede que se haya superado el límite de almacenamiento. Intenta con menos imágenes o imágenes más pequeñas.",
+            ["prevImage"] = "Imagen anterior",
+            ["nextImage"] = "Imagen siguiente",
+            ["locale"] = "es-ES"
+        },
+        ["zh"] = new()
+        {
+            ["days"] = "天", ["hours"] = "小时", ["minutes"] = "分钟", ["seconds"] = "秒",
+            ["settings"] = "设置",
+            ["language"] = "语言",
+            ["targetDateLabel"] = "目标日期和时间",
+            ["apply"] = "应用",
+            ["uploadPhotos"] = "上传照片（幻灯片）",
+            ["clearPhotos"] = "清除照片",
+            ["targetDatePrefix"] = "目标日期：",
+            ["countdownTo"] = "倒计时至",
+            ["alertSelectDate"] = "请选择日期和时间。",
+            ["confirmPastDate"] = "所选日期已过去，倒计时将显示零。是否继续？",
+            ["alertStorageError"] = "无法保存图片：可能超出了存储限制。请尝试使用更少或更小的图片。",
+            ["prevImage"] = "上一张",
+            ["nextImage"] = "下一张",
+            ["locale"] = "zh-CN"
+        }
+    };
+
+    private string _currentLang = "en";
+    private System.Globalization.CultureInfo _currentCulture = System.Globalization.CultureInfo.CreateSpecificCulture("en-US");
+    private string _lastBackgroundUrl = string.Empty;
+
+    private string T(string key)
+    {
+        if (Translations.TryGetValue(_currentLang, out var dict) && dict.TryGetValue(key, out var val))
+            return val;
+        if (Translations.TryGetValue("en", out var enDict) && enDict.TryGetValue(key, out var fallback))
+            return fallback;
+        return key;
+    }
+
+    private string _targetDateStr = DefaultTargetDate;
+    private DateTime _targetDate;
+    private Timer? _countdownTimer;
+    private Timer? _slideshowTimer;
+
+    // Countdown values
+    private int Days { get; set; }
+    private int Hours { get; set; }
+    private int Minutes { get; set; }
+    private int Seconds { get; set; }
+
+    // Display strings
+    private string CountdownTitle => $"{T("countdownTo")} {_targetDate.ToString("MMMM d, yyyy", _currentCulture)}";
+    private string TargetDateDisplay => $"{T("targetDatePrefix")} {_targetDate.ToString("MMMM d, yyyy 'at' hh:mm:ss tt", _currentCulture)}";
+
+    // Slideshow
+    private List<string> _defaultImages = new();
+    private List<string> SlideshowImages { get; set; } = new();
+    private int CurrentSlide { get; set; }
+    private List<string> ActiveImages => SlideshowImages.Count > 0 ? SlideshowImages : _defaultImages;
+    private string CurrentImageSrc => ActiveImages.Count > 0 ? ActiveImages[CurrentSlide] : string.Empty;
+
+    // Settings panel
+    private bool SettingsPanelOpen { get; set; }
+    private DateTime TargetDateInputValue { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Shuffle and set default paradise island images
+        _defaultImages = DefaultImages.OrderBy(_ => Random.Shared.Next()).ToList();
+
+        // Load persisted language
+        var storedLang = await JS.InvokeAsync<string?>("localStorage.getItem", "language");
+        if (!string.IsNullOrEmpty(storedLang) && Translations.ContainsKey(storedLang))
+            _currentLang = storedLang;
+        _currentCulture = CreateCulture(_currentLang);
+
+        // Load persisted target date
+        var stored = await JS.InvokeAsync<string?>("localStorage.getItem", "targetDate");
+        _targetDateStr = stored ?? DefaultTargetDate;
+        _targetDate = DateTime.Parse(_targetDateStr);
+        TargetDateInputValue = _targetDate;
+
+        // Load persisted slideshow images
+        var imagesJson = await JS.InvokeAsync<string?>("localStorage.getItem", "slideshowImages");
+        if (!string.IsNullOrEmpty(imagesJson))
+        {
+            try
+            {
+                var images = System.Text.Json.JsonSerializer.Deserialize<List<string>>(imagesJson);
+                if (images != null) SlideshowImages = images;
+            }
+            catch { /* ignore corrupt data */ }
+        }
+
+        UpdateCountdown();
+
+        // Start 1-second countdown timer
+        _countdownTimer = new Timer(1000);
+        _countdownTimer.Elapsed += OnCountdownTick;
+        _countdownTimer.AutoReset = true;
+        _countdownTimer.Start();
+
+        // Start slideshow timer if needed
+        StartSlideshowTimerIfNeeded();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+            await JS.InvokeVoidAsync("setHtmlLang", T("locale").Split('-')[0]);
+        var url = CurrentImageSrc;
+        if (!string.IsNullOrEmpty(url) && url != _lastBackgroundUrl)
+        {
+            _lastBackgroundUrl = url;
+            await JS.InvokeVoidAsync("setBodyBackground", url);
+        }
+    }
+
+    private void OnCountdownTick(object? sender, ElapsedEventArgs e)
+    {
+        UpdateCountdown();
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void UpdateCountdown()
+    {
+        var now = DateTime.Now;
+        var distance = _targetDate - now;
+
+        if (distance <= TimeSpan.Zero)
+        {
+            Days = Hours = Minutes = Seconds = 0;
+            return;
+        }
+
+        Days = (int)distance.TotalDays;
+        Hours = distance.Hours;
+        Minutes = distance.Minutes;
+        Seconds = distance.Seconds;
+    }
+
+    private void ToggleSettings()
+    {
+        SettingsPanelOpen = !SettingsPanelOpen;
+    }
+
+    private async Task OnLanguageChanged()
+    {
+        _currentCulture = CreateCulture(_currentLang);
+        await JS.InvokeVoidAsync("localStorage.setItem", "language", _currentLang);
+        await JS.InvokeVoidAsync("setHtmlLang", T("locale").Split('-')[0]);
+    }
+
+    private static System.Globalization.CultureInfo CreateCulture(string lang)
+    {
+        try
+        {
+            return Translations.TryGetValue(lang, out var dict) && dict.TryGetValue("locale", out var locale)
+                ? System.Globalization.CultureInfo.CreateSpecificCulture(locale)
+                : System.Globalization.CultureInfo.InvariantCulture;
+        }
+        catch
+        {
+            return System.Globalization.CultureInfo.InvariantCulture;
+        }
+    }
+
+    private async Task ApplyDate()
+    {
+        if (TargetDateInputValue == default)
+        {
+            await JS.InvokeVoidAsync("alert", T("alertSelectDate"));
+            return;
+        }
+        if (TargetDateInputValue <= DateTime.Now)
+        {
+            var ok = await JS.InvokeAsync<bool>("confirm", T("confirmPastDate"));
+            if (!ok) return;
+        }
+
+        _targetDate = TargetDateInputValue;
+        _targetDateStr = _targetDate.ToString("yyyy-MM-ddTHH:mm:ss");
+        await JS.InvokeVoidAsync("localStorage.setItem", "targetDate", _targetDateStr);
+        UpdateCountdown();
+    }
+
+    private async Task HandlePhotoUpload(InputFileChangeEventArgs e)
+    {
+        foreach (var file in e.GetMultipleFiles(50))
+        {
+            var buffer = new byte[file.Size];
+            await using var stream = file.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
+            var bytesRead = 0;
+            while (bytesRead < buffer.Length)
+            {
+                var read = await stream.ReadAsync(buffer, bytesRead, buffer.Length - bytesRead);
+                if (read == 0) break;
+                bytesRead += read;
+            }
+            var base64 = Convert.ToBase64String(buffer, 0, bytesRead);
+            var dataUrl = $"data:{file.ContentType};base64,{base64}";
+            SlideshowImages.Add(dataUrl);
+        }
+
+        CurrentSlide = 0;
+        StopSlideshowTimer();
+        StartSlideshowTimerIfNeeded();
+        await SaveSlideshowImages();
+    }
+
+    private async Task ClearPhotos()
+    {
+        SlideshowImages.Clear();
+        CurrentSlide = 0;
+        StopSlideshowTimer();
+        await JS.InvokeVoidAsync("localStorage.removeItem", "slideshowImages");
+    }
+
+    private async Task SaveSlideshowImages()
+    {
+        try
+        {
+            var json = System.Text.Json.JsonSerializer.Serialize(SlideshowImages);
+            await JS.InvokeVoidAsync("localStorage.setItem", "slideshowImages", json);
+        }
+        catch
+        {
+            await JS.InvokeVoidAsync("alert", T("alertStorageError"));
+        }
+    }
+
+    private void StartSlideshowTimerIfNeeded()
+    {
+        if (ActiveImages.Count > 1 && _slideshowTimer == null)
+        {
+            _slideshowTimer = new Timer(SlideshowIntervalMs);
+            _slideshowTimer.Elapsed += OnSlideshowTick;
+            _slideshowTimer.AutoReset = true;
+            _slideshowTimer.Start();
+        }
+    }
+
+    private void StopSlideshowTimer()
+    {
+        _slideshowTimer?.Stop();
+        _slideshowTimer?.Dispose();
+        _slideshowTimer = null;
+    }
+
+    private void OnSlideshowTick(object? sender, ElapsedEventArgs e)
+    {
+        CurrentSlide = (CurrentSlide + 1) % ActiveImages.Count;
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void PrevSlide()
+    {
+        var active = ActiveImages;
+        CurrentSlide = (CurrentSlide - 1 + active.Count) % active.Count;
+        StopSlideshowTimer();
+        StartSlideshowTimerIfNeeded();
+    }
+
+    private void NextSlide()
+    {
+        var active = ActiveImages;
+        CurrentSlide = (CurrentSlide + 1) % active.Count;
+        StopSlideshowTimer();
+        StartSlideshowTimerIfNeeded();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_countdownTimer != null)
+        {
+            _countdownTimer.Stop();
+            _countdownTimer.Dispose();
+        }
+        StopSlideshowTimer();
+        await ValueTask.CompletedTask;
+    }
+}
