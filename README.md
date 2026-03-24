@@ -4,6 +4,8 @@
 [![Desktop Build](https://github.com/npequeux/Countdown-to-Us/actions/workflows/desktop-build.yml/badge.svg)](https://github.com/npequeux/Countdown-to-Us/actions/workflows/desktop-build.yml)
 [![Latest Build](https://img.shields.io/github/v/release/npequeux/Countdown-to-Us?include_prereleases&filter=latest-build&label=latest%20build&color=blue)](https://github.com/npequeux/Countdown-to-Us/releases/tag/latest-build)
 
+[<img src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" alt="Get it on Google Play" height="60">](https://play.google.com/store/apps/details?id=com.countdown.tous)
+
 A beautiful countdown timer displaying the time remaining until October 1, 2028. Available as a web application, a native Android app, and desktop apps for Windows and Linux.
 
 ## Features
@@ -175,6 +177,23 @@ cd android
 # Clean build artifacts
 ./gradlew clean
 ```
+
+## Required GitHub Secrets
+
+The CI/CD workflows (auto-release, Play Store publishing) need the following repository secrets to sign release builds and publish to Google Play. Add them under **GitHub repo → Settings → Secrets and variables → Actions → New repository secret**.
+
+| Secret name | Required for | Description |
+|---|---|---|
+| `KEYSTORE_BASE64` | Release signing | Base64-encoded production keystore: `base64 -i your.keystore | tr -d '\n'` |
+| `KEYSTORE_PASSWORD` | Release signing | Keystore password |
+| `KEY_ALIAS` | Release signing | Key alias (e.g. `countdown-to-us`) |
+| `KEY_PASSWORD` | Release signing | Key password |
+| `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` | Play Store publishing | Google Play service account JSON credentials |
+
+> If the signing secrets are not configured, release builds fall back to the Android debug keystore (suitable for testing but not for Play Store submission).  
+> The `GITHUB_TOKEN` secret is provided automatically by GitHub Actions and does not need to be added manually.
+
+See [docs/GITHUB_SECRETS.md](docs/GITHUB_SECRETS.md) for a step-by-step guide on generating each secret.
 
 ## Publishing to Google Play Store
 
