@@ -378,7 +378,7 @@ jobs:
 
             ### Notes
             - Android APK is signed with the production keystore when the `KEYSTORE_*` secrets are configured, otherwise signed with a debug keystore.
-            - The Android App Bundle (AAB) is published separately to the Google Play Store internal track.
+            - The Android App Bundle (AAB) is automatically published to the Google Play Store internal track by the [Play Store Publish](${{ github.server_url }}/${{ github.repository }}/actions/workflows/play-store-publish.yml) workflow triggered by this release tag (requires `KEYSTORE_*` and `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` secrets).
             - Windows and Linux builds are packaged with Electron.
             - Target date: October 1, 2028
           files: release-assets/**/*
@@ -386,45 +386,6 @@ jobs:
           prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  # ── 4. Publish AAB to Google Play Store ─────────────────────────────────────
-  publish-play-store:
-    name: Publish to Google Play Store
-    needs: [check-version, build-android-aab, create-github-release]
-    if: needs.check-version.outputs.is_new == 'true'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - name: Download Android AAB artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: android-aab
-          path: .
-
-      - name: Check Play Store credentials
-        id: check_credentials
-        run: |
-          if [ -n "$SERVICE_ACCOUNT_JSON" ]; then
-            echo "available=true" >> $GITHUB_OUTPUT
-          else
-            echo "available=false" >> $GITHUB_OUTPUT
-            echo "::warning::GOOGLE_PLAY_SERVICE_ACCOUNT_JSON secret not configured – skipping Play Store upload."
-            echo "See docs/PLAY_STORE_PUBLISHING.md for setup instructions."
-          fi
-        env:
-          SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
-
-      - name: Upload AAB to Google Play (internal track)
-        if: steps.check_credentials.outputs.available == 'true'
-        uses: r0adkll/upload-google-play@v1
-        with:
-          serviceAccountJsonPlainText: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
-          packageName: com.countdown.tous
-          releaseFiles: app-release.aab
-          track: internal
-          releaseName: ${{ needs.check-version.outputs.version_name }}
-          status: completed
 
       - name: Add job summary
         run: |
@@ -436,8 +397,4 @@ jobs:
           echo "| **Commit** | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
           echo "| **GitHub Release** | [Release ${{ needs.check-version.outputs.version }}](${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ needs.check-version.outputs.version }}) |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          if [ "${{ steps.check_credentials.outputs.available }}" = "true" ]; then
-            echo "✅ **Play Store**: Published to the **internal** track." >> $GITHUB_STEP_SUMMARY
-          else
-            echo "⚠️ **Play Store**: Skipped – \`GOOGLE_PLAY_SERVICE_ACCOUNT_JSON\` secret not configured." >> $GITHUB_STEP_SUMMARY
-          fi
+          echo "ℹ️ **Play Store**: Publishing is handled by the [Play Store Publish](${{ github.server_url }}/${{ github.repository }}/actions/workflows/play-store-publish.yml) workflow, triggered automatically by the version tag pushed above." >> $GITHUB_STEP_SUMMARY

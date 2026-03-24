@@ -115,17 +115,30 @@ jobs:
             echo "track=internal" >> $GITHUB_OUTPUT
           fi
 
-      - name: Check Play Store credentials
+      - name: Check Play Store and signing credentials
         id: check_credentials
-        run: |
-          if [ -n "$SERVICE_ACCOUNT_JSON" ]; then
-            echo "available=true" >> $GITHUB_OUTPUT
-          else
-            echo "available=false" >> $GITHUB_OUTPUT
-            echo "::warning::GOOGLE_PLAY_SERVICE_ACCOUNT_JSON secret not set. Skipping Play Store upload."
-          fi
         env:
           SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          has_play_creds=false
+          has_keystore_creds=false
+          [ -n "$SERVICE_ACCOUNT_JSON" ] && has_play_creds=true
+          [ -n "$KEYSTORE_BASE64" ] && [ -n "$KEYSTORE_PASSWORD" ] && [ -n "$KEY_ALIAS" ] && [ -n "$KEY_PASSWORD" ] && has_keystore_creds=true
+          if [ "$has_play_creds" = "true" ] && [ "$has_keystore_creds" = "true" ]; then
+            echo "available=true" >> $GITHUB_OUTPUT
+            echo "✅ All credentials configured – proceeding with Play Store upload."
+          elif [ "$has_play_creds" = "true" ] && [ "$has_keystore_creds" = "false" ]; then
+            echo "available=false" >> $GITHUB_OUTPUT
+            echo "::error::GOOGLE_PLAY_SERVICE_ACCOUNT_JSON is set but production keystore secrets are missing (KEYSTORE_BASE64, KEYSTORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD). A debug-signed AAB cannot be published to Google Play. See docs/APK_SIGNING.md for setup instructions."
+            exit 1
+          else
+            echo "available=false" >> $GITHUB_OUTPUT
+            echo "::warning::GOOGLE_PLAY_SERVICE_ACCOUNT_JSON not configured – skipping Play Store upload. See docs/PLAY_STORE_PUBLISHING.md for setup instructions."
+          fi
 
       - name: Upload AAB to Google Play
         if: steps.check_credentials.outputs.available == 'true'
