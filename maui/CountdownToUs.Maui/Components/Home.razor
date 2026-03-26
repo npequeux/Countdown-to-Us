@@ -358,6 +358,7 @@
         SlideshowImages.Clear();
         CurrentSlide = 0;
         StopSlideshowTimer();
+        StartSlideshowTimerIfNeeded();
         await JS.InvokeVoidAsync("localStorage.removeItem", "slideshowImages");
     }
 
