@@ -43,10 +43,10 @@ jobs:
         run: dotnet workload install maui-windows
 
       - name: Restore
-        run: dotnet restore maui/CountdownToUs.Maui/CountdownToUs.Maui.csproj -p:TargetFrameworks=net10.0-windows10.0.19041.0
+        run: dotnet restore maui/CountdownToUs.Maui/CountdownToUs.Maui.csproj -p:TargetFrameworks=net10.0-windows10.0.19041.0 -r win-x64
 
       - name: Build (Windows)
         run: |
           dotnet build maui/CountdownToUs.Maui/CountdownToUs.Maui.csproj `
             -f net10.0-windows10.0.19041.0 -c Release --no-restore `
-            -p:WindowsPackageType=None
+            -p:WindowsPackageType=None -r win-x64
