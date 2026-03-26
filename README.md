@@ -42,7 +42,8 @@ Countdown-to-Us/
 │   ├── icon.ico
 │   ├── icon.png
 │   └── installer.iss           # Inno Setup script for Windows installer
-├── docs/                       # Documentation
+├── docs/
+│   └── google-play-store-publishing.md  # Secrets & tokens for Play Store publishing
 └── .github/workflows/          # CI/CD pipelines
 ```
 
@@ -201,6 +202,10 @@ This project follows [Semantic Versioning](https://semver.org/). When updating t
 
 1. Update `ApplicationDisplayVersion` and `ApplicationVersion` in `maui/CountdownToUs.Maui/CountdownToUs.Maui.csproj`
 2. Create and push a git tag (e.g., `git tag v1.2.0 && git push origin v1.2.0`)
+
+## Documentation
+
+- [Publishing to the Google Play Store](docs/google-play-store-publishing.md) — how to create a keystore, obtain a Google Play service account JSON key, and configure GitHub Actions secrets for automated signed AAB uploads.
 
 ## Target Date
 
