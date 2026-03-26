@@ -161,10 +161,9 @@ jobs:
             -o windows-publish
 
       - name: Zip Windows artifact
-        shell: bash
+        shell: pwsh
         run: |
-          cd windows-publish
-          zip -r ../countdown-to-us-windows-${{ needs.check-version.outputs.version }}.zip .
+          Compress-Archive -Path windows-publish\* -DestinationPath countdown-to-us-windows-${{ needs.check-version.outputs.version }}.zip
 
       - name: Upload Windows artifact
         uses: actions/upload-artifact@v4
