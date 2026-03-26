@@ -1,22 +1,13 @@
 name: Auto Release on Merge to Master
 
 # Triggers automatically when a branch is merged (pushed) to master/main.
-# Reads the version from package.json and creates a full release. If that
+# Reads the version from the MAUI project and creates a full release. If that
 # version tag already exists, the patch number is auto-incremented until a
 # free tag is found, ensuring every merge always produces a release.
-#
-# Required secrets (optional – falls back gracefully when absent):
-#   KEYSTORE_BASE64                  – Base64-encoded production keystore
-#   KEYSTORE_PASSWORD                – Keystore password
-#   KEY_ALIAS                        – Key alias
-#   KEY_PASSWORD                     – Key password
-#   GOOGLE_PLAY_SERVICE_ACCOUNT_JSON – Google Play service account JSON
-#
-# See docs/APK_SIGNING.md and docs/PLAY_STORE_PUBLISHING.md for setup.
 
 on:
   push:
-    branches: [ master, main ]
+    branches: [ main ]
 
 jobs:
   # ── 1. Read version and decide whether a release is needed ──────────────────
@@ -38,13 +29,11 @@ jobs:
       - name: Determine release version (auto-increment patch if tag exists)
         id: version
         run: |
-          BASE_VERSION=$(node -p "require('./package.json').version")
+          BASE_VERSION=$(grep -oP '(?<=<ApplicationDisplayVersion>)[^<]+' maui/CountdownToUs.Maui/CountdownToUs.Maui.csproj)
           MAJOR=$(echo "${BASE_VERSION}" | cut -d. -f1)
           MINOR=$(echo "${BASE_VERSION}" | cut -d. -f2)
-          # Strip any pre-release or build metadata suffix (e.g. "3-beta.1" → "3")
           PATCH=$(echo "${BASE_VERSION}" | cut -d. -f3 | grep -oE '^[0-9]+')
 
-          # Fetch all existing remote tags once to avoid repeated network calls
           EXISTING_TAGS=$(git ls-remote --tags origin | awk '{print $2}' | sed 's|refs/tags/||')
 
           CANDIDATE="v${MAJOR}.${MINOR}.${PATCH}"
@@ -60,81 +49,76 @@ jobs:
           echo "is_new=true" >> $GITHUB_OUTPUT
           echo "🆕 Using version ${CANDIDATE} – starting release pipeline."
 
-  # ── 2a. Build Android APK (release, signed) ─────────────────────────────────
-  build-android-apk:
-    name: Build Android APK
+  # ── 2a. Build Blazor WebAssembly ─────────────────────────────────────────────
+  build-blazor:
+    name: Build Blazor WebAssembly
     needs: check-version
     if: needs.check-version.outputs.is_new == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
-    env:
-      VERSION: ${{ needs.check-version.outputs.version }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
         with:
-          node-version: '22'
-          cache: 'npm'
+          dotnet-version: "10.0.x"
 
-      - name: Install dependencies
-        run: npm ci
+      - name: Restore
+        run: dotnet restore blazor/CountdownToUs/CountdownToUs.csproj
 
-      - name: Copy web files to www directory
+      - name: Publish
+        run: dotnet publish blazor/CountdownToUs/CountdownToUs.csproj --no-restore -c Release -o blazor-publish
+
+      - name: Zip Blazor artifact
         run: |
-          mkdir -p www
-          cp index.html countdown.js style.css www/
+          cd blazor-publish/wwwroot
+          zip -r ../../countdown-to-us-blazor-${{ needs.check-version.outputs.version }}.zip .
 
-      - name: Sync Capacitor
-        run: npx cap sync android
-
-      - name: Set up JDK 21
-        uses: actions/setup-java@v4
+      - name: Upload Blazor artifact
+        uses: actions/upload-artifact@v4
         with:
-          java-version: '21'
-          distribution: 'temurin'
-          cache: 'gradle'
+          name: blazor-wasm
+          path: countdown-to-us-blazor-${{ needs.check-version.outputs.version }}.zip
+          retention-days: 1
 
-      - name: Grant execute permission for gradlew
-        run: chmod +x android/gradlew
+  # ── 2b. Build MAUI Android APK ───────────────────────────────────────────────
+  build-android:
+    name: Build MAUI Android APK
+    needs: check-version
+    if: needs.check-version.outputs.is_new == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - name: Configure signing keystore
-        env:
-          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Install MAUI workload
+        run: dotnet workload install maui-android
+
+      - name: Restore
+        run: dotnet restore maui/CountdownToUs.Maui/CountdownToUs.Maui.csproj -p:TargetFrameworks=net10.0-android
+
+      - name: Build Android APK
         run: |
-          if [ -n "$KEYSTORE_BASE64" ] && [ -n "$KEYSTORE_PASSWORD" ] && [ -n "$KEY_ALIAS" ] && [ -n "$KEY_PASSWORD" ]; then
-            echo "$KEYSTORE_BASE64" | base64 --decode > $GITHUB_WORKSPACE/android/app/countdown-to-us.keystore
-            cat > android/keystore.properties <<EOF
-          storeFile=$GITHUB_WORKSPACE/android/app/countdown-to-us.keystore
-          storePassword=${KEYSTORE_PASSWORD}
-          keyAlias=${KEY_ALIAS}
-          keyPassword=${KEY_PASSWORD}
-          EOF
-            echo "✅ Production keystore configured."
-          else
-            echo "ℹ️  Signing secrets not set – falling back to debug keystore."
-            mkdir -p ~/.android
-            keytool -genkey -v -keystore ~/.android/debug.keystore \
-              -storepass android -alias androiddebugkey -keypass android \
-              -keyalg RSA -keysize 2048 -validity 10000 \
-              -dname "CN=Android Debug,O=Android,C=US"
-          fi
-
-      - name: Build Release APK
-        run: |
-          cd android
-          ./gradlew assembleRelease --no-daemon -PversionCode=${{ github.run_number }}
+          dotnet publish maui/CountdownToUs.Maui/CountdownToUs.Maui.csproj \
+            -f net10.0-android -c Release --no-restore \
+            -p:AndroidPackageFormats=apk \
+            -p:AndroidSigningKeyStore="" \
+            -p:AndroidKeyStore=false
 
       - name: Rename APK
         run: |
-          mv android/app/build/outputs/apk/release/app-release.apk \
-            countdown-to-us-android-${VERSION}.apk
+          APK=$(find maui -name "*.apk" | head -1)
+          mv "$APK" countdown-to-us-android-${{ needs.check-version.outputs.version }}.apk
 
       - name: Upload Android APK artifact
         uses: actions/upload-artifact@v4
@@ -143,185 +127,54 @@ jobs:
           path: countdown-to-us-android-${{ needs.check-version.outputs.version }}.apk
           retention-days: 1
 
-  # ── 2b. Build Android AAB (for Google Play Store) ───────────────────────────
-  build-android-aab:
-    name: Build Android AAB
-    needs: check-version
-    if: needs.check-version.outputs.is_new == 'true'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Copy web files to www directory
-        run: |
-          mkdir -p www
-          cp index.html countdown.js style.css www/
-
-      - name: Sync Capacitor
-        run: npx cap sync android
-
-      - name: Set up JDK 21
-        uses: actions/setup-java@v4
-        with:
-          java-version: '21'
-          distribution: 'temurin'
-          cache: 'gradle'
-
-      - name: Grant execute permission for gradlew
-        run: chmod +x android/gradlew
-
-      - name: Configure signing keystore
-        env:
-          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        run: |
-          if [ -n "$KEYSTORE_BASE64" ] && [ -n "$KEYSTORE_PASSWORD" ] && [ -n "$KEY_ALIAS" ] && [ -n "$KEY_PASSWORD" ]; then
-            echo "$KEYSTORE_BASE64" | base64 --decode > $GITHUB_WORKSPACE/android/app/countdown-to-us.keystore
-            cat > android/keystore.properties <<EOF
-          storeFile=$GITHUB_WORKSPACE/android/app/countdown-to-us.keystore
-          storePassword=${KEYSTORE_PASSWORD}
-          keyAlias=${KEY_ALIAS}
-          keyPassword=${KEY_PASSWORD}
-          EOF
-            echo "✅ Production keystore configured."
-          else
-            echo "ℹ️  Signing secrets not set – falling back to debug keystore."
-            mkdir -p ~/.android
-            keytool -genkey -v -keystore ~/.android/debug.keystore \
-              -storepass android -alias androiddebugkey -keypass android \
-              -keyalg RSA -keysize 2048 -validity 10000 \
-              -dname "CN=Android Debug,O=Android,C=US"
-          fi
-
-      - name: Build Release AAB
-        run: |
-          cd android
-          ./gradlew bundleRelease --no-daemon -PversionCode=${{ github.run_number }}
-
-      - name: Upload Android AAB artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: android-aab
-          path: android/app/build/outputs/bundle/release/app-release.aab
-          retention-days: 1
-
-  # ── 2c. Build Linux packages ─────────────────────────────────────────────────
-  build-linux:
-    name: Build Linux (AppImage & deb)
-    needs: check-version
-    if: needs.check-version.outputs.is_new == 'true'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    env:
-      VERSION: ${{ needs.check-version.outputs.version }}
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build Linux packages
-        run: npm run build:linux
-
-      - name: Rename Linux artifacts
-        run: |
-          for f in dist/*.AppImage; do
-            [ -f "$f" ] && mv "$f" "countdown-to-us-linux-${VERSION}.AppImage"
-          done
-          for f in dist/*.deb; do
-            [ -f "$f" ] && mv "$f" "countdown-to-us-linux-${VERSION}.deb"
-          done
-
-      - name: Upload Linux AppImage artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: linux-appimage
-          path: countdown-to-us-linux-${{ needs.check-version.outputs.version }}.AppImage
-          retention-days: 1
-
-      - name: Upload Linux deb artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: linux-deb
-          path: countdown-to-us-linux-${{ needs.check-version.outputs.version }}.deb
-          retention-days: 1
-
-  # ── 2d. Build Windows packages ───────────────────────────────────────────────
+  # ── 2c. Build MAUI Windows app ──────────────────────────────────────────────
   build-windows:
-    name: Build Windows (Installer & Portable)
+    name: Build MAUI Windows App
     needs: check-version
     if: needs.check-version.outputs.is_new == 'true'
     runs-on: windows-latest
     permissions:
       contents: read
-    env:
-      VERSION: ${{ needs.check-version.outputs.version }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
         with:
-          node-version: '22'
-          cache: 'npm'
+          dotnet-version: "10.0.x"
 
-      - name: Install dependencies
-        run: npm ci
+      - name: Install MAUI workload
+        run: dotnet workload install maui-windows
 
-      - name: Build Windows packages
-        run: npm run build:win
+      - name: Restore
+        run: dotnet restore maui/CountdownToUs.Maui/CountdownToUs.Maui.csproj -p:TargetFrameworks=net10.0-windows10.0.19041.0
 
-      - name: Rename Windows artifacts
+      - name: Publish Windows app
+        run: |
+          dotnet publish maui/CountdownToUs.Maui/CountdownToUs.Maui.csproj `
+            -f net10.0-windows10.0.19041.0 -c Release --no-restore `
+            -p:WindowsPackageType=None `
+            -p:SelfContained=true `
+            -o windows-publish
+
+      - name: Zip Windows artifact
         shell: bash
         run: |
-          for f in dist/*Setup*.exe; do
-            [ -f "$f" ] && mv "$f" "countdown-to-us-windows-setup-${VERSION}.exe"
-          done
-          for f in dist/*.exe; do
-            [[ "$f" != *Setup* ]] && [ -f "$f" ] && mv "$f" "countdown-to-us-windows-portable-${VERSION}.exe"
-          done
+          cd windows-publish
+          zip -r ../countdown-to-us-windows-${{ needs.check-version.outputs.version }}.zip .
 
-      - name: Upload Windows installer artifact
+      - name: Upload Windows artifact
         uses: actions/upload-artifact@v4
         with:
-          name: windows-setup
-          path: countdown-to-us-windows-setup-${{ needs.check-version.outputs.version }}.exe
-          retention-days: 1
-
-      - name: Upload Windows portable artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: windows-portable
-          path: countdown-to-us-windows-portable-${{ needs.check-version.outputs.version }}.exe
+          name: windows-app
+          path: countdown-to-us-windows-${{ needs.check-version.outputs.version }}.zip
           retention-days: 1
 
   # ── 3. Create GitHub Release ─────────────────────────────────────────────────
   create-github-release:
     name: Create GitHub Release
-    needs: [check-version, build-android-apk, build-android-aab, build-linux, build-windows]
+    needs: [check-version, build-blazor, build-android, build-windows]
     if: needs.check-version.outputs.is_new == 'true'
     runs-on: ubuntu-latest
     permissions:
@@ -359,42 +212,23 @@ jobs:
 
             | Platform | File | Notes |
             |---|---|---|
-            | 🤖 Android | `countdown-to-us-android-*.apk` | Sideload on Android device |
-            | 🤖 Android | `app-release.aab` | Android App Bundle (Google Play / manual upload) |
-            | 🐧 Linux | `countdown-to-us-linux-*.AppImage` | Portable – runs on any Linux distro |
-            | 🐧 Linux | `countdown-to-us-linux-*.deb` | Debian/Ubuntu installer |
-            | 🪟 Windows | `countdown-to-us-windows-setup-*.exe` | Windows installer (recommended) |
-            | 🪟 Windows | `countdown-to-us-windows-portable-*.exe` | Windows portable (no installation needed) |
+            | 🌐 Web | `countdown-to-us-blazor-*.zip` | Blazor WebAssembly – extract and serve as a static site |
+            | 🤖 Android | `countdown-to-us-android-*.apk` | .NET MAUI Android APK – sideload on Android device |
+            | 🪟 Windows | `countdown-to-us-windows-*.zip` | .NET MAUI Windows app – extract and run the `.exe` |
 
             ### Installation
 
+            **Web**: Extract the zip and deploy to any static web host (GitHub Pages, Netlify, etc.).
+
             **Android**: Enable *Install unknown apps* in Settings, then open the APK file.
 
-            **Linux (AppImage)**: Make executable with `chmod +x *.AppImage`, then run it.
-
-            **Linux (deb)**: Install with `sudo dpkg -i *.deb` or double-click in your file manager.
-
-            **Windows**: Run the setup installer or use the portable executable directly.
+            **Windows**: Extract the zip and run `CountdownToUs.Maui.exe`.
 
             ### Notes
-            - Android APK is signed with the production keystore when the `KEYSTORE_*` secrets are configured, otherwise signed with a debug keystore.
-            - The Android App Bundle (AAB) is automatically published to the Google Play Store internal track by the [Play Store Publish](${{ github.server_url }}/${{ github.repository }}/actions/workflows/play-store-publish.yml) workflow triggered by this release tag (requires `KEYSTORE_*` and `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` secrets).
-            - Windows and Linux builds are packaged with Electron.
+            - Built with .NET 10 (Blazor WebAssembly + .NET MAUI)
             - Target date: October 1, 2028
           files: release-assets/**/*
           draft: false
           prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Add job summary
-        run: |
-          echo "## 🚀 Release ${{ needs.check-version.outputs.version }} Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| | |" >> $GITHUB_STEP_SUMMARY
-          echo "|---|---|" >> $GITHUB_STEP_SUMMARY
-          echo "| **Version** | \`${{ needs.check-version.outputs.version }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| **Commit** | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| **GitHub Release** | [Release ${{ needs.check-version.outputs.version }}](${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ needs.check-version.outputs.version }}) |" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "ℹ️ **Play Store**: Publishing is handled by the [Play Store Publish](${{ github.server_url }}/${{ github.repository }}/actions/workflows/play-store-publish.yml) workflow, triggered automatically by the version tag pushed above." >> $GITHUB_STEP_SUMMARY

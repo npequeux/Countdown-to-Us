@@ -2,10 +2,8 @@ name: Blazor Build
 
 on:
   push:
-    branches: ["copilot/create-dotnet10-blazor-version"]
-    paths: ["blazor/**"]
+    branches: ["main"]
   pull_request:
-    paths: ["blazor/**"]
 
 jobs:
   build:

@@ -21,7 +21,8 @@ jobs:
 
       - name: Download 10 paradise island photos from Unsplash
         run: |
-          mkdir -p images www/images
+          mkdir -p blazor/CountdownToUs/wwwroot/images
+          mkdir -p maui/CountdownToUs.Maui/wwwroot/images
           declare -A PHOTOS=(
             [1]="photo-1506744038136-46273834b3fb"
             [2]="photo-1507525428034-b723cf961d3e"
@@ -38,38 +39,45 @@ jobs:
             ID="${PHOTOS[$n]}"
             URL="https://images.unsplash.com/${ID}?auto=format&fit=crop&w=1920&q=80"
             echo "Downloading image $n: $URL"
-            curl -L --max-time 60 -s "$URL" -o "images/${n}.jpg"
-            cp "images/${n}.jpg" "www/images/${n}.jpg"
-            echo "  Saved images/${n}.jpg ($(du -h images/${n}.jpg | cut -f1))"
+            curl -L --max-time 60 -s "$URL" -o "blazor/CountdownToUs/wwwroot/images/${n}.jpg"
+            cp "blazor/CountdownToUs/wwwroot/images/${n}.jpg" "maui/CountdownToUs.Maui/wwwroot/images/${n}.jpg"
+            echo "  Saved images/${n}.jpg ($(du -h blazor/CountdownToUs/wwwroot/images/${n}.jpg | cut -f1))"
           done
-          ls -lh images/
+          ls -lh blazor/CountdownToUs/wwwroot/images/
 
-      - name: Update countdown.js to use local image paths
+      - name: Update DefaultImages in Blazor Home.razor
         run: |
           python3 << 'PYEOF'
           import re
 
-          with open('countdown.js', 'r') as f:
+          entries = [f'        "images/{i}.jpg"' for i in range(1, 11)]
+          local_images = ',\n'.join(entries)
+
+          for path in [
+            'blazor/CountdownToUs/Pages/Home.razor',
+            'maui/CountdownToUs.Maui/Components/Home.razor'
+          ]:
+            with open(path, 'r') as f:
               content = f.read()
 
-          entries = [f"    'images/{i}.jpg'" for i in range(1, 11)]
-          local_images = ',\n'.join(entries)
-          pattern = r"(// --- Slideshow ---\nconst DEFAULT_IMAGES = \[)[^]]*(\];)"
-          replacement = r"\g<1>\n" + local_images + r"\n\g<2>"
-          content = re.sub(pattern, replacement, content, flags=re.DOTALL)
+            # Match the DefaultImages array regardless of whitespace or URL content
+            pattern = r'(private static readonly string\[\] DefaultImages = new\[\]\s*\n\s*\{).*?(\n\s*\};)'
+            replacement = r'\g<1>\n' + local_images + r'\g<2>'
+            new_content = re.sub(pattern, replacement, content, flags=re.DOTALL)
 
-          with open('countdown.js', 'w') as f:
-              f.write(content)
-          print("Updated countdown.js with local image paths")
+            with open(path, 'w') as f:
+              f.write(new_content)
+            print(f"Updated {path} with local image paths")
           PYEOF
-
-          cp countdown.js www/countdown.js
 
       - name: Commit and push real photos
         run: |
           git config user.email "action@github.com"
           git config user.name "GitHub Actions"
-          git add images/ www/images/ countdown.js www/countdown.js
+          git add blazor/CountdownToUs/wwwroot/images/ \
+                  maui/CountdownToUs.Maui/wwwroot/images/ \
+                  blazor/CountdownToUs/Pages/Home.razor \
+                  maui/CountdownToUs.Maui/Components/Home.razor
           git diff --staged --quiet || \
             git commit -m "${{ github.event.inputs.commit_message }}"
           git push
