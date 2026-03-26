@@ -5,8 +5,9 @@
 
 A beautiful countdown timer displaying the time remaining until October 1, 2028. Built entirely in C# with .NET 10, available as:
 
-- A **web application** (Blazor WebAssembly)
+- A **web application** (Blazor WebAssembly — runs in any browser, including on Linux)
 - A native **Android app** (.NET MAUI)
+- A native **Windows desktop app** (.NET MAUI)
 
 ## Features
 
@@ -47,6 +48,11 @@ Countdown-to-Us/
 - .NET MAUI workload: `dotnet workload install maui-android`
 - [Android Studio](https://developer.android.com/studio) (optional, for device emulator)
 
+### For Windows Development (.NET MAUI)
+- Windows 10 version 1809 or higher
+- [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
+- .NET MAUI workload: `dotnet workload install maui-windows`
+
 ## How to Build
 
 ### Clone the Repository
@@ -71,7 +77,7 @@ To publish a production build:
 dotnet publish -c Release -o publish
 ```
 
-The published output in `publish/wwwroot` can be deployed to any static web host (GitHub Pages, Netlify, Azure Static Web Apps, etc.).
+The published output in `publish/wwwroot` can be deployed to any static web host (GitHub Pages, Netlify, Azure Static Web Apps, etc.). The web app runs in any browser, including on Linux.
 
 ### Build the Android App (.NET MAUI)
 
@@ -96,12 +102,33 @@ dotnet publish -f net10.0-android -c Release \
   -p:AndroidKeyStore=false
 ```
 
+### Build the Windows Desktop App (.NET MAUI)
+
+Must be run on a Windows machine. Install the MAUI Windows workload (first time only):
+
+```powershell
+dotnet workload install maui-windows
+```
+
+Build and publish:
+
+```powershell
+cd maui/CountdownToUs.Maui
+dotnet publish -f net10.0-windows10.0.19041.0 -c Release `
+  -p:WindowsPackageType=None `
+  -p:SelfContained=true `
+  -o windows-publish
+```
+
+Run `windows-publish\CountdownToUs.Maui.exe` directly — no installation required.
+
 ## Downloading Pre-built Packages
 
 All platform packages are attached to every versioned release on the [Releases page](https://github.com/npequeux/Countdown-to-Us/releases):
 
 - `countdown-to-us-blazor-*.zip` — Blazor WebAssembly web app (extract and serve statically)
 - `countdown-to-us-android-*.apk` — Android APK (.NET MAUI)
+- `countdown-to-us-windows-*.zip` — Windows desktop app (.NET MAUI, extract and run the `.exe`)
 
 ## Creating a New Release
 
