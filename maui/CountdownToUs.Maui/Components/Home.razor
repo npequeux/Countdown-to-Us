@@ -198,7 +198,7 @@
     private string TargetDateDisplay => $"{T("targetDatePrefix")} {_targetDate.ToString("MMMM d, yyyy 'at' hh:mm:ss tt", _currentCulture)}";
 
     // Slideshow
-    private List<string> _defaultImages = new();
+    private List<string> _defaultImages = DefaultImages.OrderBy(_ => Random.Shared.Next()).ToList();
     private List<string> SlideshowImages { get; set; } = new();
     private int CurrentSlide { get; set; }
     private List<string> ActiveImages => SlideshowImages.Count > 0 ? SlideshowImages : _defaultImages;
@@ -210,9 +210,6 @@
 
     protected override async Task OnInitializedAsync()
     {
-        // Shuffle and set default paradise island images
-        _defaultImages = DefaultImages.OrderBy(_ => Random.Shared.Next()).ToList();
-
         // Load persisted language
         var storedLang = await JS.InvokeAsync<string?>("localStorage.getItem", "language");
         if (!string.IsNullOrEmpty(storedLang) && Translations.ContainsKey(storedLang))
