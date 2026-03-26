@@ -173,8 +173,8 @@ jobs:
         run: |
           "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" ^
             /DAppVersion=${{ needs.check-version.outputs.version }} ^
-            /DSourceDir=windows-publish ^
-            /DOutputDir=installer-output ^
+            /DSourceDir=%CD%\windows-publish ^
+            /DOutputDir=%CD%\installer-output ^
             build\installer.iss
 
       - name: Rename installer
