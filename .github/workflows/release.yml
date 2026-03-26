@@ -12,8 +12,8 @@ on:
         default: 'v1.0.0'
 
 jobs:
-  build-android:
-    name: Build Android APK
+  build-blazor:
+    name: Build Blazor WebAssembly
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -22,49 +22,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Copy web files to www directory
-        run: |
-          mkdir -p www
-          cp index.html countdown.js style.css www/
-
-      - name: Sync Capacitor
-        run: npx cap sync android
-
-      - name: Set up JDK 21
-        uses: actions/setup-java@v4
-        with:
-          java-version: '21'
-          distribution: 'temurin'
-          cache: 'gradle'
-
-      - name: Grant execute permission for gradlew
-        run: chmod +x android/gradlew
-
-      - name: Create debug keystore
-        run: |
-          mkdir -p ~/.android
-          if [ ! -f ~/.android/debug.keystore ]; then
-            keytool -genkey -v -keystore ~/.android/debug.keystore \
-              -storepass android -alias androiddebugkey -keypass android \
-              -keyalg RSA -keysize 2048 -validity 10000 \
-              -dname "CN=Android Debug,O=Android,C=US"
-          fi
-
-      - name: Build Release APK
-        run: |
-          cd android
-          ./gradlew assembleRelease --no-daemon -PversionCode=${{ github.run_number }}
-
-      - name: Get version from tag or input
+      - name: Get version
         id: get_version
         run: |
           if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
@@ -73,17 +31,71 @@ jobs:
             echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
           fi
 
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Restore
+        run: dotnet restore blazor/CountdownToUs/CountdownToUs.csproj
+
+      - name: Publish
+        run: dotnet publish blazor/CountdownToUs/CountdownToUs.csproj --no-restore -c Release -o blazor-publish
+
+      - name: Zip Blazor artifact
+        run: |
+          cd blazor-publish/wwwroot
+          zip -r ../../countdown-to-us-blazor-${{ steps.get_version.outputs.version }}.zip .
+
+      - name: Upload Blazor artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: blazor-wasm
+          path: countdown-to-us-blazor-${{ steps.get_version.outputs.version }}.zip
+          retention-days: 1
+
+  build-android:
+    name: Build MAUI Android APK
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Get version
+        id: get_version
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Install MAUI workload
+        run: dotnet workload install maui-android
+
+      - name: Restore
+        run: dotnet restore maui/CountdownToUs.Maui/CountdownToUs.Maui.csproj -p:TargetFrameworks=net10.0-android
+
+      - name: Build Android APK
+        run: |
+          dotnet publish maui/CountdownToUs.Maui/CountdownToUs.Maui.csproj \
+            -f net10.0-android -c Release --no-restore \
+            -p:AndroidPackageFormats=apk \
+            -p:AndroidSigningKeyStore="" \
+            -p:AndroidKeyStore=false
+
       - name: Rename APK
         run: |
-          VERSION=${{ steps.get_version.outputs.version }}
-          if [ -f android/app/build/outputs/apk/release/app-release.apk ]; then
-            mv android/app/build/outputs/apk/release/app-release.apk countdown-to-us-android-${VERSION}.apk
-          else
-            echo "✗ Error: Signed APK not found at android/app/build/outputs/apk/release/app-release.apk"
-            echo "The Gradle assembleRelease task should have produced a signed APK with the debug keystore."
-            echo "Check the Gradle build logs above for errors."
-            exit 1
-          fi
+          APK=$(find maui -name "*.apk" | head -1)
+          mv "$APK" countdown-to-us-android-${{ steps.get_version.outputs.version }}.apk
 
       - name: Upload Android APK artifact
         uses: actions/upload-artifact@v4
@@ -92,123 +104,9 @@ jobs:
           path: countdown-to-us-android-${{ steps.get_version.outputs.version }}.apk
           retention-days: 1
 
-  build-linux:
-    name: Build Linux (AppImage & deb)
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Get version from tag or input
-        id: get_version
-        run: |
-          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
-            echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
-          else
-            echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Build Linux packages
-        run: npm run build:linux
-
-      - name: Rename Linux artifacts
-        run: |
-          VERSION=${{ steps.get_version.outputs.version }}
-          for f in dist/*.AppImage; do
-            [ -f "$f" ] && mv "$f" "countdown-to-us-linux-${VERSION}.AppImage"
-          done
-          for f in dist/*.deb; do
-            [ -f "$f" ] && mv "$f" "countdown-to-us-linux-${VERSION}.deb"
-          done
-
-      - name: Upload Linux AppImage artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: linux-appimage
-          path: countdown-to-us-linux-${{ steps.get_version.outputs.version }}.AppImage
-          retention-days: 1
-
-      - name: Upload Linux deb artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: linux-deb
-          path: countdown-to-us-linux-${{ steps.get_version.outputs.version }}.deb
-          retention-days: 1
-
-  build-windows:
-    name: Build Windows (Installer & Portable)
-    runs-on: windows-latest
-    permissions:
-      contents: read
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Get version from tag or input
-        id: get_version
-        shell: bash
-        run: |
-          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
-            echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
-          else
-            echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Build Windows packages
-        run: npm run build:win
-
-      - name: Rename Windows artifacts
-        shell: bash
-        run: |
-          VERSION=${{ steps.get_version.outputs.version }}
-          for f in dist/*Setup*.exe; do
-            [ -f "$f" ] && mv "$f" "countdown-to-us-windows-setup-${VERSION}.exe"
-          done
-          # Portable exe: electron-builder names it "{productName} Portable {version}.exe"
-          # or "{productName} {version}.exe" depending on version; match any non-Setup exe
-          for f in dist/*.exe; do
-            [[ "$f" != *Setup* ]] && [ -f "$f" ] && mv "$f" "countdown-to-us-windows-portable-${VERSION}.exe"
-          done
-
-      - name: Upload Windows installer artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: windows-setup
-          path: countdown-to-us-windows-setup-${{ steps.get_version.outputs.version }}.exe
-          retention-days: 1
-
-      - name: Upload Windows portable artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: windows-portable
-          path: countdown-to-us-windows-portable-${{ steps.get_version.outputs.version }}.exe
-          retention-days: 1
-
   create-release:
     name: Create GitHub Release
-    needs: [build-android, build-linux, build-windows]
+    needs: [build-blazor, build-android]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -217,7 +115,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Get version from tag or input
+      - name: Get version
         id: get_version
         run: |
           if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
@@ -246,29 +144,20 @@ jobs:
 
             | Platform | File | Notes |
             |---|---|---|
-            | 🤖 Android | `countdown-to-us-android-*.apk` | Install on Android device |
-            | 🐧 Linux | `countdown-to-us-linux-*.AppImage` | Portable, runs on any Linux distro |
-            | 🐧 Linux | `countdown-to-us-linux-*.deb` | Debian/Ubuntu installer |
-            | 🪟 Windows | `countdown-to-us-windows-setup-*.exe` | Windows installer (recommended) |
-            | 🪟 Windows | `countdown-to-us-windows-portable-*.exe` | Windows portable (no installation) |
+            | 🌐 Web | `countdown-to-us-blazor-*.zip` | Blazor WebAssembly – extract and serve as a static site |
+            | 🤖 Android | `countdown-to-us-android-*.apk` | .NET MAUI Android APK – sideload on Android device |
 
             ### Installation
 
+            **Web**: Extract the zip and deploy to any static web host (GitHub Pages, Netlify, etc.).
+
             **Android**: Enable "Unknown sources" in Settings > Security, then open the APK file.
 
-            **Linux (AppImage)**: Make executable with `chmod +x *.AppImage`, then run it.
-
-            **Linux (deb)**: Install with `sudo dpkg -i *.deb` or double-click in your file manager.
-
-            **Windows**: Run the setup installer or use the portable executable directly.
-
             ### Notes
-            - Android APK is signed with a debug keystore for testing purposes.
-            - Windows and Linux builds are packaged with Electron.
+            - Built with .NET 10 (Blazor WebAssembly + .NET MAUI)
             - Target date: October 1, 2028
           files: release-assets/**/*
           draft: false
           prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-

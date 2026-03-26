@@ -2,10 +2,8 @@ name: MAUI Build
 
 on:
   push:
-    branches: ["copilot/rewrite-all-in-csharp"]
-    paths: ["maui/**"]
+    branches: ["main"]
   pull_request:
-    paths: ["maui/**"]
 
 jobs:
   build-android:

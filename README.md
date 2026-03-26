@@ -1,12 +1,12 @@
 # Countdown to Us
 
-[![Android Build](https://github.com/npequeux/Countdown-to-Us/actions/workflows/android-build.yml/badge.svg)](https://github.com/npequeux/Countdown-to-Us/actions/workflows/android-build.yml)
-[![Desktop Build](https://github.com/npequeux/Countdown-to-Us/actions/workflows/desktop-build.yml/badge.svg)](https://github.com/npequeux/Countdown-to-Us/actions/workflows/desktop-build.yml)
-[![Latest Build](https://img.shields.io/github/v/release/npequeux/Countdown-to-Us?include_prereleases&filter=latest-build&label=latest%20build&color=blue)](https://github.com/npequeux/Countdown-to-Us/releases/tag/latest-build)
+[![Blazor Build](https://github.com/npequeux/Countdown-to-Us/actions/workflows/blazor-build.yml/badge.svg)](https://github.com/npequeux/Countdown-to-Us/actions/workflows/blazor-build.yml)
+[![MAUI Build](https://github.com/npequeux/Countdown-to-Us/actions/workflows/maui-build.yml/badge.svg)](https://github.com/npequeux/Countdown-to-Us/actions/workflows/maui-build.yml)
 
-[<img src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" alt="Get it on Google Play" height="60">](https://play.google.com/store/apps/details?id=com.countdown.tous)
+A beautiful countdown timer displaying the time remaining until October 1, 2028. Built entirely in C# with .NET 10, available as:
 
-A beautiful countdown timer displaying the time remaining until October 1, 2028. Available as a web application, a native Android app, and desktop apps for Windows and Linux.
+- A **web application** (Blazor WebAssembly)
+- A native **Android app** (.NET MAUI)
 
 ## Features
 
@@ -14,28 +14,40 @@ A beautiful countdown timer displaying the time remaining until October 1, 2028.
 - Responsive design that works on desktop and mobile devices
 - Modern glassmorphism UI with gradient background
 - Updates every second for accurate time tracking
-- Available as an installable Android APK
-- Available as a Windows desktop app (installer and portable)
-- Available as a Linux desktop app (AppImage and .deb)
+- Multi-language support (English, French, Spanish, Chinese)
+- Customizable slideshow background with photo upload
+- Configurable target date/time
+
+## Project Structure
+
+```
+Countdown-to-Us/
+├── blazor/
+│   └── CountdownToUs/          # Blazor WebAssembly web app (.NET 10)
+│       ├── Pages/Home.razor    # Main countdown component
+│       ├── wwwroot/            # Static web assets (CSS, icons)
+│       └── CountdownToUs.csproj
+├── maui/
+│   └── CountdownToUs.Maui/     # .NET MAUI cross-platform app
+│       ├── Components/Home.razor  # Main countdown component
+│       ├── wwwroot/            # Static assets
+│       └── CountdownToUs.Maui.csproj
+├── build/                      # App icons
+├── docs/                       # Documentation
+└── .github/workflows/          # CI/CD pipelines
+```
 
 ## Prerequisites
 
-### For Web Development
-- A modern web browser (Chrome, Firefox, Safari, Edge)
+### For Web Development (Blazor)
+- [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
 
-### For Desktop Development (Windows & Linux)
-- [Node.js](https://nodejs.org/) (version 22 or higher)
-- [npm](https://www.npmjs.com/) (comes with Node.js)
-- On Linux: `fakeroot` and `dpkg` for .deb builds (`sudo apt-get install fakeroot dpkg`)
+### For Android Development (.NET MAUI)
+- [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
+- .NET MAUI workload: `dotnet workload install maui-android`
+- [Android Studio](https://developer.android.com/studio) (optional, for device emulator)
 
-### For Android Development
-- [Node.js](https://nodejs.org/) (version 22 or higher)
-- [npm](https://www.npmjs.com/) (comes with Node.js)
-- [Java Development Kit (JDK)](https://www.oracle.com/java/technologies/downloads/) version 11 or higher
-- [Android Studio](https://developer.android.com/studio) (for Android development)
-- Android SDK with API level 22 or higher
-
-## Installation
+## How to Build
 
 ### Clone the Repository
 
@@ -44,286 +56,80 @@ git clone https://github.com/npequeux/Countdown-to-Us.git
 cd Countdown-to-Us
 ```
 
-### Install Dependencies
+### Build and Run the Web App (Blazor WebAssembly)
 
 ```bash
-npm install
+cd blazor/CountdownToUs
+dotnet run
 ```
 
-## How to Test
+Then open `http://localhost:5000` in your browser.
 
-### Testing the Web App
-
-The easiest way to test the web application:
-
-1. **Direct browser access**: Simply open `index.html` in any modern web browser
-2. **Using a local server** (recommended for more accurate testing):
-   ```bash
-   # Using Python 3
-   python3 -m http.server 8000
-   
-   # Or using Node.js (if you have http-server installed)
-   npx http-server . -p 8000
-   ```
-   Then open `http://localhost:8000` in your browser
-
-### Testing the Android App
-
-1. **Using Android Studio**:
-   ```bash
-   npm run open:android
-   ```
-   This opens the project in Android Studio where you can:
-   - Run the app on an emulator
-   - Run the app on a connected physical device
-   - Debug the application
-
-2. **Using the command line** (requires Android device connected or emulator running):
-   ```bash
-   cd android
-   ./gradlew installDebug
-   ```
-
-## How to Compile
-
-### Compiling for Web
-
-The web application doesn't require compilation - it uses vanilla HTML, CSS, and JavaScript. However, if you make changes, you can sync them to the Android project:
+To publish a production build:
 
 ```bash
-npm run sync
+dotnet publish -c Release -o publish
 ```
 
-### Compiling for Desktop (Windows & Linux)
+The published output in `publish/wwwroot` can be deployed to any static web host (GitHub Pages, Netlify, Azure Static Web Apps, etc.).
 
-#### Run Locally with Electron
+### Build the Android App (.NET MAUI)
+
+Install the MAUI Android workload (first time only):
 
 ```bash
-npm run electron
+dotnet workload install maui-android
 ```
 
-#### Build for Windows (NSIS installer + portable .exe)
+Build a debug APK:
 
 ```bash
-npm run build:win
+cd maui/CountdownToUs.Maui
+dotnet build -f net10.0-android -c Debug
 ```
 
-The installer is generated at: `dist/Countdown to Us Setup *.exe`
-The portable executable is at: `dist/Countdown to Us *.exe`
-
-#### Build for Linux (AppImage + .deb)
+Build a release APK:
 
 ```bash
-npm run build:linux
+dotnet publish -f net10.0-android -c Release \
+  -p:AndroidPackageFormats=apk \
+  -p:AndroidKeyStore=false
 ```
-
-The AppImage is generated at: `dist/Countdown to Us-*.AppImage`
-The .deb package is at: `dist/countdown-to-us_*.deb`
-
-#### Build for all desktop platforms at once
-
-```bash
-npm run build:desktop
-```
-
-### Compiling for Android
-
-#### Debug Build (for testing)
-
-```bash
-npm run build:android
-```
-
-The APK will be generated at: `android/app/build/outputs/apk/debug/app-debug.apk`
-
-#### Release Build (for distribution)
-
-```bash
-npm run build:android-release
-```
-
-The APK will be generated at: `android/app/build/outputs/apk/release/app-release.apk`
-
-**Note**: Release builds are signed with the Android debug keystore by default for testing purposes. For production distribution, you should configure a proper release keystore. See [docs/APK_SIGNING.md](docs/APK_SIGNING.md) for a detailed guide on signing APKs for production.
-
-#### Building an Android App Bundle (AAB) for Google Play
-
-Google Play requires an AAB rather than an APK for new apps. Build one with:
-
-```bash
-npm run build:android-bundle
-```
-
-The AAB will be generated at: `android/app/build/outputs/bundle/release/app-release.aab`
-
-See [docs/PLAY_STORE_PUBLISHING.md](docs/PLAY_STORE_PUBLISHING.md) for the complete guide to publishing on Google Play.
-
-#### Using Gradle Directly
-
-You can also use Gradle commands directly:
-
-```bash
-cd android
-
-# Debug build
-./gradlew assembleDebug
-
-# Release APK
-./gradlew assembleRelease
-
-# Release AAB (for Google Play)
-./gradlew bundleRelease
-
-# Clean build artifacts
-./gradlew clean
-```
-
-## Required GitHub Secrets
-
-The CI/CD workflows (auto-release, Play Store publishing) need the following repository secrets to sign release builds and publish to Google Play. Add them under **GitHub repo → Settings → Secrets and variables → Actions → New repository secret**.
-
-| Secret name | Required for | Description |
-|---|---|---|
-| `KEYSTORE_BASE64` | Release signing | Base64-encoded production keystore: `base64 -i your.keystore | tr -d '\n'` |
-| `KEYSTORE_PASSWORD` | Release signing | Keystore password |
-| `KEY_ALIAS` | Release signing | Key alias (e.g. `countdown-to-us`) |
-| `KEY_PASSWORD` | Release signing | Key password |
-| `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` | Play Store publishing | Google Play service account JSON credentials |
-
-> If the signing secrets are not configured, release builds fall back to the Android debug keystore (suitable for testing but not for Play Store submission).  
-> The `GITHUB_TOKEN` secret is provided automatically by GitHub Actions and does not need to be added manually.
-
-See [docs/GITHUB_SECRETS.md](docs/GITHUB_SECRETS.md) for a step-by-step guide on generating each secret.
-
-## Publishing to Google Play Store
-
-See [docs/PLAY_STORE_PUBLISHING.md](docs/PLAY_STORE_PUBLISHING.md) for a step-by-step guide covering:
-
-- Creating a Google Play Developer account
-- Generating and configuring a production keystore
-- Building a signed Android App Bundle (AAB)
-- Submitting the app manually via Play Console
-- Automating releases with the included GitHub Actions workflow
-
-## Installing the APK on Android Devices
-
-1. **Enable installation from unknown sources** on your Android device:
-   - Go to Settings > Security
-   - Enable "Unknown sources" or "Install unknown apps"
-
-2. **Transfer the APK** to your device:
-   - Via USB cable
-   - Via cloud storage (Google Drive, Dropbox, etc.)
-   - Via email
-   - Download from GitHub Actions artifacts (see below)
-
-3. **Install the APK**:
-   - Open the APK file on your device
-   - Follow the installation prompts
 
 ## Downloading Pre-built Packages
 
-### From GitHub Releases (Stable Versions)
+All platform packages are attached to every versioned release on the [Releases page](https://github.com/npequeux/Countdown-to-Us/releases):
 
-All platform packages (Android APK, Windows installer, Linux AppImage/deb) are attached to every versioned release:
-
-1. Go to the [Releases page](https://github.com/npequeux/Countdown-to-Us/releases)
-2. Download the package for your platform:
-   - `countdown-to-us-android-*.apk` — Android
-   - `countdown-to-us-windows-setup-*.exe` — Windows installer
-   - `countdown-to-us-windows-portable-*.exe` — Windows portable
-   - `countdown-to-us-linux-*.AppImage` — Linux AppImage (portable)
-   - `countdown-to-us-linux-*.deb` — Linux Debian/Ubuntu package
-
-### Latest Build (updated on every commit)
-
-The easiest way to get the most recent Android APK is from the rolling pre-release that is automatically updated on every commit to main:
-
-1. Go to the [Latest Build release](https://github.com/npequeux/Countdown-to-Us/releases/tag/latest-build)
-2. Download the `countdown-to-us-*.apk` file
-3. Install it on your Android device
+- `countdown-to-us-blazor-*.zip` — Blazor WebAssembly web app (extract and serve statically)
+- `countdown-to-us-android-*.apk` — Android APK (.NET MAUI)
 
 ## Creating a New Release
 
-To create a new release with an APK:
-
-### Option 1: Using Git Tags (Recommended)
+### Using Git Tags (Recommended)
 
 ```bash
-# Create and push a new version tag
-git tag v1.0.1
-git push origin v1.0.1
+git tag v1.2.0
+git push origin v1.2.0
 ```
 
-This will automatically trigger the release workflow that builds the APK and creates a GitHub release.
+This triggers the release workflow that builds both the Blazor WASM zip and the MAUI Android APK, then creates a GitHub release.
 
-### Option 2: Manual Workflow Dispatch
+### Manual Workflow Dispatch
 
-1. Go to the "Actions" tab on GitHub
-2. Select "Release APK" workflow
-3. Click "Run workflow"
-4. Enter the version number (e.g., v1.0.1)
-5. Click "Run workflow"
-
-The release workflow will:
-- Build a release APK
-- Create a GitHub release with the specified version
-- Attach the APK to the release
-- Make it available for download
+1. Go to the **Actions** tab on GitHub
+2. Select the **Release** workflow
+3. Click **Run workflow** and enter the version number
 
 ## Versioning
 
-This project follows [Semantic Versioning](https://semver.org/):
-- **MAJOR version** (X.0.0): Incompatible changes
-- **MINOR version** (1.X.0): New functionality in a backward compatible manner
-- **PATCH version** (1.0.X): Backward compatible bug fixes
+This project follows [Semantic Versioning](https://semver.org/). When updating the version:
 
-When updating the version:
-1. Update `versionCode` and `versionName` in `android/app/build.gradle`
-2. Update `version` in `package.json`
-3. Create and push a git tag with the new version
-
-## Project Structure
-
-```
-Countdown-to-Us/
-├── www/                      # Web application source files (for Android)
-│   ├── index.html           # Main HTML structure
-│   ├── countdown.js         # JavaScript countdown logic
-│   └── style.css            # Styling and responsive design
-├── electron/
-│   └── main.js              # Electron main process (desktop entry point)
-├── android/                 # Android native project (generated)
-├── capacitor.config.json    # Capacitor configuration
-├── package.json            # Node.js dependencies and scripts
-└── README.md               # This file
-```
+1. Update `ApplicationDisplayVersion` and `ApplicationVersion` in `maui/CountdownToUs.Maui/CountdownToUs.Maui.csproj`
+2. Create and push a git tag (e.g., `git tag v1.2.0 && git push origin v1.2.0`)
 
 ## Target Date
 
 The countdown is set to October 1, 2028 at 00:00:00 (midnight).
-
-## Development Workflow
-
-1. Make changes to files in the root directory (`index.html`, `countdown.js`, `style.css`)
-2. Copy changes to www directory: `cp index.html countdown.js style.css www/`
-3. Test in browser by opening `index.html`
-4. Sync changes to Android: `npm run sync`
-5. Build Android app: `npm run build:android`
-6. Test on Android device or emulator
-
-## Troubleshooting
-
-### Android Build Issues
-
-- **Gradle build fails**: Ensure you have JDK 11 or higher installed and JAVA_HOME is set correctly
-- **SDK not found**: Open the project in Android Studio at least once to download required SDKs
-- **Out of memory**: Increase Gradle memory in `android/gradle.properties`
-
-### Web App Issues
-
-- **Countdown not updating**: Check browser console for JavaScript errors
-- **Styling issues**: Clear browser cache and reload
 
 ## License
 
