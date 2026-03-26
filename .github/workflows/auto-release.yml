@@ -161,10 +161,9 @@ jobs:
             -o windows-publish
 
       - name: Zip Windows artifact
-        shell: bash
+        shell: pwsh
         run: |
-          cd windows-publish
-          zip -r ../countdown-to-us-windows-${{ needs.check-version.outputs.version }}.zip .
+          Compress-Archive -Path windows-publish\* -DestinationPath countdown-to-us-windows-${{ needs.check-version.outputs.version }}.zip
 
       - name: Install Inno Setup
         run: choco install innosetup -y --no-progress
@@ -217,7 +216,7 @@ jobs:
         run: dotnet publish blazor/CountdownToUs/CountdownToUs.csproj --no-restore -c Release -o blazor-publish
 
       - name: Restore Linux host
-        run: dotnet restore linux-host/CountdownToUs.Linux/CountdownToUs.Linux.csproj
+        run: dotnet restore linux-host/CountdownToUs.Linux/CountdownToUs.Linux.csproj -r linux-x64
 
       - name: Publish Linux host
         run: |
