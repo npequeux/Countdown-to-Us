@@ -151,16 +151,140 @@ jobs:
           cd windows-publish
           zip -r ../countdown-to-us-windows-${{ steps.get_version.outputs.version }}.zip .
 
-      - name: Upload Windows artifact
+      - name: Install Inno Setup
+        run: choco install innosetup -y --no-progress
+
+      - name: Build Windows installer
+        shell: cmd
+        run: |
+          "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" ^
+            /DAppVersion=${{ steps.get_version.outputs.version }} ^
+            /DSourceDir=windows-publish ^
+            /DOutputDir=installer-output ^
+            build\installer.iss
+
+      - name: Rename installer
+        shell: bash
+        run: |
+          mv installer-output/countdown-to-us-setup-${{ steps.get_version.outputs.version }}.exe \
+             countdown-to-us-setup-${{ steps.get_version.outputs.version }}.exe
+
+      - name: Upload Windows artifacts
         uses: actions/upload-artifact@v4
         with:
           name: windows-app
-          path: countdown-to-us-windows-${{ steps.get_version.outputs.version }}.zip
+          path: |
+            countdown-to-us-windows-${{ steps.get_version.outputs.version }}.zip
+            countdown-to-us-setup-${{ steps.get_version.outputs.version }}.exe
+          retention-days: 1
+
+  build-linux:
+    name: Build Linux Package
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Get version
+        id: get_version
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Restore Blazor
+        run: dotnet restore blazor/CountdownToUs/CountdownToUs.csproj
+
+      - name: Publish Blazor WebAssembly
+        run: dotnet publish blazor/CountdownToUs/CountdownToUs.csproj --no-restore -c Release -o blazor-publish
+
+      - name: Restore Linux host
+        run: dotnet restore linux-host/CountdownToUs.Linux/CountdownToUs.Linux.csproj
+
+      - name: Publish Linux host
+        run: |
+          dotnet publish linux-host/CountdownToUs.Linux/CountdownToUs.Linux.csproj \
+            --no-restore -c Release \
+            -r linux-x64 --self-contained true \
+            -p:PublishSingleFile=true \
+            -o linux-publish
+
+      - name: Copy Blazor files into Linux package
+        run: cp -r blazor-publish/wwwroot linux-publish/
+
+      - name: Create tar.gz
+        run: |
+          cd linux-publish
+          tar -czf ../countdown-to-us-linux-${{ steps.get_version.outputs.version }}.tar.gz .
+
+      - name: Create .deb package
+        run: |
+          VERSION=${{ steps.get_version.outputs.version }}
+          DEB_VERSION="${VERSION#v}"
+          DEB_DIR="deb-pkg"
+
+          mkdir -p "$DEB_DIR/DEBIAN"
+          mkdir -p "$DEB_DIR/usr/lib/countdown-to-us"
+          mkdir -p "$DEB_DIR/usr/bin"
+          mkdir -p "$DEB_DIR/usr/share/applications"
+          mkdir -p "$DEB_DIR/usr/share/icons/hicolor/256x256/apps"
+
+          cp -r linux-publish/* "$DEB_DIR/usr/lib/countdown-to-us/"
+
+          cat > "$DEB_DIR/usr/bin/countdown-to-us" << 'EOF'
+          #!/bin/bash
+          exec /usr/lib/countdown-to-us/CountdownToUs "$@"
+          EOF
+          chmod +x "$DEB_DIR/usr/bin/countdown-to-us"
+
+          cat > "$DEB_DIR/usr/share/applications/countdown-to-us.desktop" << 'EOF'
+          [Desktop Entry]
+          Version=1.0
+          Type=Application
+          Name=Countdown to Us
+          Comment=Beautiful countdown timer to October 1, 2028
+          Exec=countdown-to-us
+          Icon=countdown-to-us
+          Terminal=false
+          Categories=Utility;
+          EOF
+
+          cp build/icon.png "$DEB_DIR/usr/share/icons/hicolor/256x256/apps/countdown-to-us.png"
+
+          cat > "$DEB_DIR/DEBIAN/control" << EOF
+          Package: countdown-to-us
+          Version: $DEB_VERSION
+          Architecture: amd64
+          Maintainer: Countdown to Us <https://github.com/npequeux/Countdown-to-Us>
+          Description: Beautiful countdown timer
+           A countdown timer displaying the time remaining until October 1, 2028.
+           Built with .NET 10 (Blazor WebAssembly + ASP.NET Core).
+          EOF
+
+          dpkg-deb --build "$DEB_DIR" countdown-to-us-linux-${{ steps.get_version.outputs.version }}.deb
+
+      - name: Upload Linux artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-app
+          path: |
+            countdown-to-us-linux-${{ steps.get_version.outputs.version }}.tar.gz
+            countdown-to-us-linux-${{ steps.get_version.outputs.version }}.deb
           retention-days: 1
 
   create-release:
     name: Create GitHub Release
-    needs: [build-blazor, build-android, build-windows]
+    needs: [build-blazor, build-android, build-windows, build-linux]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -200,7 +324,10 @@ jobs:
             |---|---|---|
             | 🌐 Web | `countdown-to-us-blazor-*.zip` | Blazor WebAssembly – extract and serve as a static site |
             | 🤖 Android | `countdown-to-us-android-*.apk` | .NET MAUI Android APK – sideload on Android device |
-            | 🪟 Windows | `countdown-to-us-windows-*.zip` | .NET MAUI Windows app – extract and run the `.exe` |
+            | 🪟 Windows (installer) | `countdown-to-us-setup-*.exe` | Windows installer – recommended for most users |
+            | 🪟 Windows (portable) | `countdown-to-us-windows-*.zip` | .NET MAUI Windows app – extract and run the `.exe` |
+            | 🐧 Linux (tar.gz) | `countdown-to-us-linux-*.tar.gz` | Self-contained Linux app (x64) |
+            | 🐧 Linux (.deb) | `countdown-to-us-linux-*.deb` | Debian/Ubuntu package (x64) |
 
             ### Installation
 
@@ -208,10 +335,16 @@ jobs:
 
             **Android**: Enable "Unknown sources" in Settings > Security, then open the APK file.
 
-            **Windows**: Extract the zip and run `CountdownToUs.Maui.exe`.
+            **Windows (installer)**: Run `countdown-to-us-setup-*.exe` and follow the wizard.
+
+            **Windows (portable)**: Extract the zip and run `CountdownToUs.Maui.exe`.
+
+            **Linux (tar.gz)**: Extract the archive and run `./CountdownToUs`. The app opens in your default browser at `http://localhost:5000`.
+
+            **Linux (.deb)**: Install with `sudo dpkg -i countdown-to-us-linux-*.deb`, then launch from your application menu or run `countdown-to-us`.
 
             ### Notes
-            - Built with .NET 10 (Blazor WebAssembly + .NET MAUI)
+            - Built with .NET 10 (Blazor WebAssembly + .NET MAUI + ASP.NET Core)
             - Target date: October 1, 2028
           files: release-assets/**/*
           draft: false

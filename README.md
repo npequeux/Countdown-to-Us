@@ -7,7 +7,8 @@ A beautiful countdown timer displaying the time remaining until October 1, 2028.
 
 - A **web application** (Blazor WebAssembly — runs in any browser, including on Linux)
 - A native **Android app** (.NET MAUI)
-- A native **Windows desktop app** (.NET MAUI)
+- A native **Windows desktop app** (.NET MAUI) with installer
+- A **Linux desktop app** (ASP.NET Core self-contained binary, opens in your browser)
 
 ## Features
 
@@ -29,11 +30,18 @@ Countdown-to-Us/
 │       ├── wwwroot/            # Static web assets (CSS, icons)
 │       └── CountdownToUs.csproj
 ├── maui/
-│   └── CountdownToUs.Maui/     # .NET MAUI cross-platform app
+│   └── CountdownToUs.Maui/     # .NET MAUI cross-platform app (Android + Windows)
 │       ├── Components/Home.razor  # Main countdown component
 │       ├── wwwroot/            # Static assets
 │       └── CountdownToUs.Maui.csproj
-├── build/                      # App icons
+├── linux-host/
+│   └── CountdownToUs.Linux/    # ASP.NET Core self-hosted Linux app
+│       ├── Program.cs          # Web server entry point
+│       └── CountdownToUs.Linux.csproj
+├── build/                      # App icons and installer scripts
+│   ├── icon.ico
+│   ├── icon.png
+│   └── installer.iss           # Inno Setup script for Windows installer
 ├── docs/                       # Documentation
 └── .github/workflows/          # CI/CD pipelines
 ```
@@ -52,6 +60,11 @@ Countdown-to-Us/
 - Windows 10 version 1809 or higher
 - [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
 - .NET MAUI workload: `dotnet workload install maui-windows`
+- [Inno Setup 6](https://jrsoftware.org/isdl.php) (optional, for building the installer)
+
+### For Linux Development
+- Linux (x64)
+- [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
 
 ## How to Build
 
@@ -122,13 +135,48 @@ dotnet publish -f net10.0-windows10.0.19041.0 -c Release `
 
 Run `windows-publish\CountdownToUs.Maui.exe` directly — no installation required.
 
+To build the installer (requires [Inno Setup 6](https://jrsoftware.org/isdl.php)):
+
+```powershell
+& "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" /DAppVersion=1.0.0 build\installer.iss
+```
+
+The installer will be created at `installer-output\countdown-to-us-setup-1.0.0.exe`.
+
+### Build the Linux App
+
+Build and publish a self-contained Linux binary:
+
+```bash
+# First, publish the Blazor WASM app
+dotnet publish blazor/CountdownToUs/CountdownToUs.csproj -c Release -o blazor-publish
+
+# Then publish the Linux host and add the Blazor files
+dotnet publish linux-host/CountdownToUs.Linux/CountdownToUs.Linux.csproj \
+  -c Release -r linux-x64 --self-contained true \
+  -p:PublishSingleFile=true \
+  -o linux-publish
+cp -r blazor-publish/wwwroot linux-publish/
+```
+
+Run it:
+
+```bash
+./linux-publish/CountdownToUs
+```
+
+The app starts a local web server and opens your browser at `http://localhost:5000`. Press Ctrl+C to stop.
+
 ## Downloading Pre-built Packages
 
 All platform packages are attached to every versioned release on the [Releases page](https://github.com/npequeux/Countdown-to-Us/releases):
 
 - `countdown-to-us-blazor-*.zip` — Blazor WebAssembly web app (extract and serve statically)
 - `countdown-to-us-android-*.apk` — Android APK (.NET MAUI)
-- `countdown-to-us-windows-*.zip` — Windows desktop app (.NET MAUI, extract and run the `.exe`)
+- `countdown-to-us-setup-*.exe` — Windows installer (recommended; creates Start Menu entry and uninstaller)
+- `countdown-to-us-windows-*.zip` — Windows portable app (.NET MAUI, extract and run the `.exe`)
+- `countdown-to-us-linux-*.tar.gz` — Linux self-contained app (x64, extract and run `./CountdownToUs`)
+- `countdown-to-us-linux-*.deb` — Debian/Ubuntu package (x64, install with `sudo dpkg -i *.deb`)
 
 ## Creating a New Release
 
