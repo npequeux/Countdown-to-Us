@@ -30,7 +30,11 @@
     <script src="_framework/blazor.webassembly#[.{fingerprint}].js"></script>
     <script>
         window.setBodyBackground = function (url) {
-            document.body.style.backgroundImage = 'url("' + url.replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '")';
+            var escaped = url.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+            document.body.style.backgroundImage = 'url("' + escaped + '")';
+            document.body.style.backgroundSize = 'cover';
+            document.body.style.backgroundPosition = 'center';
+            document.body.style.backgroundRepeat = 'no-repeat';
         };
         window.setHtmlLang = function (lang) {
             document.documentElement.setAttribute('lang', lang);
