@@ -346,20 +346,51 @@ jobs:
       - name: List release assets
         run: find release-assets -type f | sort
 
+      - name: Determine final release version
+        id: final_version
+        run: |
+          git fetch --tags
+
+          ORIGINAL="${{ needs.check-version.outputs.version }}"
+          VERSION="${ORIGINAL#v}"
+          MAJOR=$(echo "${VERSION}" | cut -d. -f1)
+          MINOR=$(echo "${VERSION}" | cut -d. -f2)
+          PATCH=$(echo "${VERSION}" | cut -d. -f3)
+
+          CANDIDATE="v${MAJOR}.${MINOR}.${PATCH}"
+          while git rev-parse "${CANDIDATE}" >/dev/null 2>&1; do
+            echo "⏭  Tag ${CANDIDATE} already exists – incrementing patch version."
+            PATCH=$((PATCH + 1))
+            CANDIDATE="v${MAJOR}.${MINOR}.${PATCH}"
+          done
+
+          echo "version=${CANDIDATE}" >> $GITHUB_OUTPUT
+
+          if [ "${CANDIDATE}" != "${ORIGINAL}" ]; then
+            echo "⚠️  Version bumped from ${ORIGINAL} to ${CANDIDATE} due to concurrent release."
+            while IFS= read -r -d '' f; do
+              dir=$(dirname "$f")
+              base=$(basename "$f")
+              newbase="${base//${ORIGINAL}/${CANDIDATE}}"
+              mv "$f" "${dir}/${newbase}"
+              echo "Renamed: $f -> ${dir}/${newbase}"
+            done < <(find release-assets -name "*${ORIGINAL}*" -print0)
+          fi
+
       - name: Create version tag
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag ${{ needs.check-version.outputs.version }}
-          git push origin ${{ needs.check-version.outputs.version }}
+          git tag ${{ steps.final_version.outputs.version }}
+          git push origin ${{ steps.final_version.outputs.version }}
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: ${{ needs.check-version.outputs.version }}
-          name: Release ${{ needs.check-version.outputs.version }}
+          tag_name: ${{ steps.final_version.outputs.version }}
+          name: Release ${{ steps.final_version.outputs.version }}
           body: |
-            ## Countdown to Us – Release ${{ needs.check-version.outputs.version }}
+            ## Countdown to Us – Release ${{ steps.final_version.outputs.version }}
 
             Automatically released from commit [`${{ github.sha }}`](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}) on `${{ github.ref_name }}`.
 
