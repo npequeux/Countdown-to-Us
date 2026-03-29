@@ -134,7 +134,12 @@ jobs:
 
       - name: Rename APK
         run: |
-          APK=$(find maui -name "*.apk" | head -1)
+          APK=$(find maui -name "*-Signed.apk" | head -1)
+          if [ -z "$APK" ]; then
+            echo "No signed APK found. Available APKs:"
+            find maui -name "*.apk"
+            exit 1
+          fi
           mv "$APK" countdown-to-us-android-${{ needs.check-version.outputs.version }}.apk
 
       - name: Upload Android APK artifact
