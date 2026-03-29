@@ -19,6 +19,7 @@ jobs:
     outputs:
       version: ${{ steps.version.outputs.version }}
       version_name: ${{ steps.version.outputs.version_name }}
+      version_code: ${{ steps.version.outputs.version_code }}
       is_new: ${{ steps.version.outputs.is_new }}
     steps:
       - name: Checkout repository
@@ -46,6 +47,8 @@ jobs:
 
           echo "version=${CANDIDATE}" >> $GITHUB_OUTPUT
           echo "version_name=${MAJOR}.${MINOR}.${PATCH}" >> $GITHUB_OUTPUT
+          VERSION_CODE=$((MAJOR * 10000 + MINOR * 100 + PATCH))
+          echo "version_code=${VERSION_CODE}" >> $GITHUB_OUTPUT
           echo "is_new=true" >> $GITHUB_OUTPUT
           echo "🆕 Using version ${CANDIDATE} – starting release pipeline."
 
@@ -141,6 +144,8 @@ jobs:
           dotnet publish maui/CountdownToUs.Maui/CountdownToUs.Maui.csproj \
             -f net10.0-android -c Release --no-restore \
             -p:AndroidPackageFormats=apk \
+            -p:ApplicationVersion=${{ needs.check-version.outputs.version_code }} \
+            -p:ApplicationDisplayVersion=${{ needs.check-version.outputs.version_name }} \
             -p:AndroidKeyStore=true \
             -p:AndroidSigningKeyStore="${{ github.workspace }}/release-key.jks" \
             -p:AndroidSigningKeyAlias="${{ env.KEY_ALIAS }}" \
