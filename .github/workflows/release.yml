@@ -84,19 +84,34 @@ jobs:
       - name: Restore
         run: dotnet restore maui/CountdownToUs.Maui/CountdownToUs.Maui.csproj -p:TargetFrameworks=net10.0-android
 
-      - name: Generate Android signing keystore
+      - name: Set up Android signing keystore
+        env:
+          SIGNING_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          SIGNING_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          SIGNING_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          SIGNING_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
-          KEYSTORE_PASS=$(openssl rand -hex 16)
-          echo "KEYSTORE_PASS=$KEYSTORE_PASS" >> "$GITHUB_ENV"
-          keytool -genkeypair -v \
-            -keystore "${{ github.workspace }}/release-key.jks" \
-            -alias release \
-            -keyalg RSA \
-            -keysize 2048 \
-            -validity 10000 \
-            -dname "CN=Countdown to Us, O=CountdownToUs, C=US" \
-            -storepass "$KEYSTORE_PASS" \
-            -keypass "$KEYSTORE_PASS"
+          if [ -n "$SIGNING_KEYSTORE_BASE64" ]; then
+            printf '%s' "$SIGNING_KEYSTORE_BASE64" | base64 --decode \
+              > "${{ github.workspace }}/release-key.jks"
+            echo "KEYSTORE_PASS=$SIGNING_KEYSTORE_PASSWORD" >> "$GITHUB_ENV"
+            echo "KEY_ALIAS=$SIGNING_KEY_ALIAS" >> "$GITHUB_ENV"
+            echo "KEY_PASS=$SIGNING_KEY_PASSWORD" >> "$GITHUB_ENV"
+          else
+            KEYSTORE_PASS=$(openssl rand -hex 16)
+            echo "KEYSTORE_PASS=$KEYSTORE_PASS" >> "$GITHUB_ENV"
+            echo "KEY_ALIAS=release" >> "$GITHUB_ENV"
+            echo "KEY_PASS=$KEYSTORE_PASS" >> "$GITHUB_ENV"
+            keytool -genkeypair -v \
+              -keystore "${{ github.workspace }}/release-key.jks" \
+              -alias release \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10000 \
+              -dname "CN=Countdown to Us, O=CountdownToUs, C=US" \
+              -storepass "$KEYSTORE_PASS" \
+              -keypass "$KEYSTORE_PASS"
+          fi
 
       - name: Build Android APK
         run: |
@@ -105,8 +120,8 @@ jobs:
             -p:AndroidPackageFormats=apk \
             -p:AndroidKeyStore=true \
             -p:AndroidSigningKeyStore="${{ github.workspace }}/release-key.jks" \
-            -p:AndroidSigningKeyAlias=release \
-            -p:AndroidSigningKeyPass="${{ env.KEYSTORE_PASS }}" \
+            -p:AndroidSigningKeyAlias="${{ env.KEY_ALIAS }}" \
+            -p:AndroidSigningKeyPass="${{ env.KEY_PASS }}" \
             -p:AndroidSigningStorePass="${{ env.KEYSTORE_PASS }}"
 
       - name: Rename APK
