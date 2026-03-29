@@ -107,13 +107,30 @@ jobs:
       - name: Restore
         run: dotnet restore maui/CountdownToUs.Maui/CountdownToUs.Maui.csproj -p:TargetFrameworks=net10.0-android
 
+      - name: Generate Android signing keystore
+        run: |
+          KEYSTORE_PASS=$(openssl rand -hex 16)
+          echo "KEYSTORE_PASS=$KEYSTORE_PASS" >> "$GITHUB_ENV"
+          keytool -genkeypair -v \
+            -keystore "${{ github.workspace }}/release-key.jks" \
+            -alias release \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -dname "CN=Countdown to Us, O=CountdownToUs, C=US" \
+            -storepass "$KEYSTORE_PASS" \
+            -keypass "$KEYSTORE_PASS"
+
       - name: Build Android APK
         run: |
           dotnet publish maui/CountdownToUs.Maui/CountdownToUs.Maui.csproj \
             -f net10.0-android -c Release --no-restore \
             -p:AndroidPackageFormats=apk \
-            -p:AndroidSigningKeyStore="" \
-            -p:AndroidKeyStore=false
+            -p:AndroidKeyStore=true \
+            -p:AndroidSigningKeyStore="${{ github.workspace }}/release-key.jks" \
+            -p:AndroidSigningKeyAlias=release \
+            -p:AndroidSigningKeyPass="${{ env.KEYSTORE_PASS }}" \
+            -p:AndroidSigningStorePass="${{ env.KEYSTORE_PASS }}"
 
       - name: Rename APK
         run: |
