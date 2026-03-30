@@ -68,10 +68,18 @@ jobs:
         id: get_version
         run: |
           if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
-            echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+            VERSION="${{ github.event.inputs.version }}"
           else
-            echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+            VERSION="${GITHUB_REF#refs/tags/}"
           fi
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          VERSION_STRIPPED="${VERSION#v}"
+          MAJOR=$(echo "${VERSION_STRIPPED}" | cut -d. -f1)
+          MINOR=$(echo "${VERSION_STRIPPED}" | cut -d. -f2)
+          PATCH=$(echo "${VERSION_STRIPPED}" | cut -d. -f3 | grep -oE '^[0-9]+')
+          PATCH=${PATCH:-0}
+          echo "version_code=$((MAJOR * 10000 + MINOR * 100 + PATCH))" >> $GITHUB_OUTPUT
+          echo "version_name=${MAJOR}.${MINOR}.${PATCH}" >> $GITHUB_OUTPUT
 
       - name: Setup .NET 10
         uses: actions/setup-dotnet@v4
@@ -118,6 +126,8 @@ jobs:
           dotnet publish maui/CountdownToUs.Maui/CountdownToUs.Maui.csproj \
             -f net10.0-android -c Release --no-restore \
             -p:AndroidPackageFormats=apk \
+            -p:ApplicationVersion=${{ steps.get_version.outputs.version_code }} \
+            -p:ApplicationDisplayVersion=${{ steps.get_version.outputs.version_name }} \
             -p:AndroidKeyStore=true \
             -p:AndroidSigningKeyStore="${{ github.workspace }}/release-key.jks" \
             -p:AndroidSigningKeyAlias="${{ env.KEY_ALIAS }}" \

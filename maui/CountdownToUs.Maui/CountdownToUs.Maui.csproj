@@ -17,8 +17,8 @@
     <ApplicationId>com.countdown.tous</ApplicationId>
 
     <!-- Versions — keep in sync with android/app/build.gradle -->
-    <ApplicationDisplayVersion>1.1.3</ApplicationDisplayVersion>
-    <ApplicationVersion>3</ApplicationVersion>
+    <ApplicationDisplayVersion>1.1.17</ApplicationDisplayVersion>
+    <ApplicationVersion>10117</ApplicationVersion>
 
     <!-- Android specifics -->
     <AndroidEnableProfiledAot>true</AndroidEnableProfiledAot>
