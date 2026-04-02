@@ -109,6 +109,7 @@
             ["alertSelectDate"] = "Please select a date and time.",
             ["confirmPastDate"] = "The selected date is in the past. The countdown will show all zeros. Continue?",
             ["alertStorageError"] = "Could not save images: storage limit may be exceeded. Try using fewer or smaller images.",
+            ["alertSkippedPhotos"] = "Some photos could not be loaded and were skipped.",
             ["prevImage"] = "Previous image",
             ["nextImage"] = "Next image",
             ["locale"] = "en-US"
@@ -127,6 +128,7 @@
             ["alertSelectDate"] = "Veuillez sélectionner une date et une heure.",
             ["confirmPastDate"] = "La date sélectionnée est dans le passé. Le compte à rebours affichera zéro. Continuer ?",
             ["alertStorageError"] = "Impossible de sauvegarder les images : la limite de stockage est peut-être dépassée. Essayez avec moins d'images ou des images plus petites.",
+            ["alertSkippedPhotos"] = "Certaines photos n'ont pas pu être chargées et ont été ignorées.",
             ["prevImage"] = "Image précédente",
             ["nextImage"] = "Image suivante",
             ["locale"] = "fr-FR"
@@ -145,6 +147,7 @@
             ["alertSelectDate"] = "Por favor selecciona una fecha y hora.",
             ["confirmPastDate"] = "La fecha seleccionada está en el pasado. La cuenta regresiva mostrará ceros. ¿Continuar?",
             ["alertStorageError"] = "No se pudieron guardar las imágenes: puede que se haya superado el límite de almacenamiento. Intenta con menos imágenes o imágenes más pequeñas.",
+            ["alertSkippedPhotos"] = "Algunas fotos no pudieron cargarse y fueron omitidas.",
             ["prevImage"] = "Imagen anterior",
             ["nextImage"] = "Imagen siguiente",
             ["locale"] = "es-ES"
@@ -163,6 +166,7 @@
             ["alertSelectDate"] = "请选择日期和时间。",
             ["confirmPastDate"] = "所选日期已过去，倒计时将显示零。是否继续？",
             ["alertStorageError"] = "无法保存图片：可能超出了存储限制。请尝试使用更少或更小的图片。",
+            ["alertSkippedPhotos"] = "部分照片无法加载，已被跳过。",
             ["prevImage"] = "上一张",
             ["nextImage"] = "下一张",
             ["locale"] = "zh-CN"
@@ -328,21 +332,27 @@
 
     private async Task HandlePhotoUpload(InputFileChangeEventArgs e)
     {
+        var skipped = 0;
         foreach (var file in e.GetMultipleFiles(50))
         {
-            var buffer = new byte[file.Size];
-            await using var stream = file.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
-            var bytesRead = 0;
-            while (bytesRead < buffer.Length)
+            try
             {
-                var read = await stream.ReadAsync(buffer, bytesRead, buffer.Length - bytesRead);
-                if (read == 0) break;
-                bytesRead += read;
+                await using var stream = file.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
+                using var ms = new MemoryStream();
+                await stream.CopyToAsync(ms);
+                var base64 = Convert.ToBase64String(ms.ToArray());
+                var contentType = string.IsNullOrEmpty(file.ContentType) ? "image/jpeg" : file.ContentType;
+                var dataUrl = $"data:{contentType};base64,{base64}";
+                SlideshowImages.Add(dataUrl);
             }
-            var base64 = Convert.ToBase64String(buffer, 0, bytesRead);
-            var dataUrl = $"data:{file.ContentType};base64,{base64}";
-            SlideshowImages.Add(dataUrl);
+            catch
+            {
+                skipped++;
+            }
         }
+
+        if (skipped > 0)
+            await JS.InvokeVoidAsync("alert", T("alertSkippedPhotos"));
 
         CurrentSlide = 0;
         StopSlideshowTimer();
