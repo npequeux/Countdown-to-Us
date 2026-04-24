@@ -124,13 +124,24 @@ jobs:
             echo "KEY_ALIAS=$SIGNING_KEY_ALIAS" >> "$GITHUB_ENV"
             echo "KEY_PASS=$SIGNING_KEY_PASSWORD" >> "$GITHUB_ENV"
           else
-            echo "ERROR: ANDROID_KEYSTORE_BASE64 secret is not set."
-            echo "A consistent signing keystore is required so that users can"
-            echo "install newer APKs over existing installations without a"
-            echo "signature-mismatch conflict."
-            echo "Please configure the ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD,"
-            echo "ANDROID_KEY_ALIAS, and ANDROID_KEY_PASSWORD repository secrets."
-            exit 1
+            echo "WARNING: ANDROID_KEYSTORE_BASE64 secret is not set."
+            echo "Generating a temporary self-signed keystore for this build."
+            echo "Note: APKs signed with a generated keystore cannot be used to"
+            echo "update installations signed with a different keystore."
+            echo "For consistent release signing, configure the ANDROID_KEYSTORE_BASE64,"
+            echo "ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, and ANDROID_KEY_PASSWORD"
+            echo "repository secrets."
+            TEMP_PASS=$(openssl rand -base64 24)
+            keytool -genkey -v \
+              -keystore "${{ github.workspace }}/release-key.jks" \
+              -alias "countdown" \
+              -keyalg RSA -keysize 2048 -validity 10000 \
+              -dname "CN=Countdown To Us, OU=Dev, O=Dev, L=Unknown, S=Unknown, C=US" \
+              -storepass "$TEMP_PASS" -keypass "$TEMP_PASS" \
+              -storetype JKS
+            echo "KEYSTORE_PASS=$TEMP_PASS" >> "$GITHUB_ENV"
+            echo "KEY_ALIAS=countdown" >> "$GITHUB_ENV"
+            echo "KEY_PASS=$TEMP_PASS" >> "$GITHUB_ENV"
           fi
 
       - name: Build Android APK
