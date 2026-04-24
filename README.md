@@ -196,6 +196,46 @@ This triggers the release workflow that builds both the Blazor WASM zip and the 
 2. Select the **Release** workflow
 3. Click **Run workflow** and enter the version number
 
+## Private Build (Personal Photos as Default)
+
+The **Private Build** workflow creates a version of the app that uses your own photos as the default slideshow background instead of the public Unsplash placeholders. Your photos are bundled directly into the built app and are **never committed to the repository**.
+
+### Setup
+
+Store each photo as a base64-encoded GitHub Actions secret:
+
+```bash
+# Encode a photo on Linux
+base64 -w0 my-photo.jpg
+
+# Encode a photo on macOS
+base64 -i my-photo.jpg | tr -d '\n'
+```
+
+Add the output as a repository secret named `PRIVATE_IMAGE_1_BASE64` through `PRIVATE_IMAGE_10_BASE64` (you need at least one).
+
+Go to **Settings → Secrets and variables → Actions → New repository secret**.
+
+### Triggering a Private Build
+
+**Via a git tag:**
+
+```bash
+git tag private-v1.0.0
+git push origin private-v1.0.0
+```
+
+**Via manual dispatch:**
+
+1. Go to the **Actions** tab on GitHub
+2. Select the **Private Build** workflow
+3. Click **Run workflow** and enter the version number
+
+The workflow produces the same platform packages as a regular release but prefixed with `private-`:
+- `countdown-to-us-private-blazor-*.zip`
+- `countdown-to-us-private-android-*.apk`
+- `countdown-to-us-private-linux-*.tar.gz`
+
 ## Versioning
 
 This project follows [Semantic Versioning](https://semver.org/). When updating the version:
