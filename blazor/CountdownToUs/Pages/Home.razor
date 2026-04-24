@@ -20,6 +20,14 @@
 
     <div class="countdown">
         <div class="time-unit">
+            <span class="number">@Years</span>
+            <span class="label">@T("years")</span>
+        </div>
+        <div class="time-unit">
+            <span class="number">@Months</span>
+            <span class="label">@T("months")</span>
+        </div>
+        <div class="time-unit">
             <span class="number">@Days</span>
             <span class="label">@T("days")</span>
         </div>
@@ -97,7 +105,7 @@
     {
         ["en"] = new()
         {
-            ["days"] = "Days", ["hours"] = "Hours", ["minutes"] = "Minutes", ["seconds"] = "Seconds",
+            ["years"] = "Years", ["months"] = "Months", ["days"] = "Days", ["hours"] = "Hours", ["minutes"] = "Minutes", ["seconds"] = "Seconds",
             ["settings"] = "Settings",
             ["language"] = "Language",
             ["targetDateLabel"] = "Target Date & Time",
@@ -116,7 +124,7 @@
         },
         ["fr"] = new()
         {
-            ["days"] = "Jours", ["hours"] = "Heures", ["minutes"] = "Minutes", ["seconds"] = "Secondes",
+            ["years"] = "Ans", ["months"] = "Mois", ["days"] = "Jours", ["hours"] = "Heures", ["minutes"] = "Minutes", ["seconds"] = "Secondes",
             ["settings"] = "Paramètres",
             ["language"] = "Langue",
             ["targetDateLabel"] = "Date et heure cible",
@@ -135,7 +143,7 @@
         },
         ["es"] = new()
         {
-            ["days"] = "Días", ["hours"] = "Horas", ["minutes"] = "Minutos", ["seconds"] = "Segundos",
+            ["years"] = "Años", ["months"] = "Meses", ["days"] = "Días", ["hours"] = "Horas", ["minutes"] = "Minutos", ["seconds"] = "Segundos",
             ["settings"] = "Configuración",
             ["language"] = "Idioma",
             ["targetDateLabel"] = "Fecha y hora objetivo",
@@ -154,7 +162,7 @@
         },
         ["zh"] = new()
         {
-            ["days"] = "天", ["hours"] = "小时", ["minutes"] = "分钟", ["seconds"] = "秒",
+            ["years"] = "年", ["months"] = "月", ["days"] = "天", ["hours"] = "小时", ["minutes"] = "分钟", ["seconds"] = "秒",
             ["settings"] = "设置",
             ["language"] = "语言",
             ["targetDateLabel"] = "目标日期和时间",
@@ -192,6 +200,8 @@
     private Timer? _slideshowTimer;
 
     // Countdown values
+    private int Years { get; set; }
+    private int Months { get; set; }
     private int Days { get; set; }
     private int Hours { get; set; }
     private int Minutes { get; set; }
@@ -275,11 +285,37 @@
 
         if (distance <= TimeSpan.Zero)
         {
-            Days = Hours = Minutes = Seconds = 0;
+            Years = Months = Days = Hours = Minutes = Seconds = 0;
             return;
         }
 
-        Days = (int)distance.TotalDays;
+        // Use the date corresponding to now + complete days remaining so that
+        // the time-of-day component (hours/minutes/seconds) is fully captured by
+        // distance.Hours/Minutes/Seconds and does not bleed into the days count.
+        var startDate = now.Date;
+        var endDate = startDate.AddDays(distance.Days);
+
+        int years = endDate.Year - startDate.Year;
+        int months = endDate.Month - startDate.Month;
+        int days = endDate.Day - startDate.Day;
+
+        if (days < 0)
+        {
+            months--;
+            // Borrow from the month immediately before endDate
+            int borrowYear = endDate.Month == 1 ? endDate.Year - 1 : endDate.Year;
+            int borrowMonth = endDate.Month == 1 ? 12 : endDate.Month - 1;
+            days += DateTime.DaysInMonth(borrowYear, borrowMonth);
+        }
+        if (months < 0)
+        {
+            years--;
+            months += 12;
+        }
+
+        Years = years;
+        Months = months;
+        Days = days;
         Hours = distance.Hours;
         Minutes = distance.Minutes;
         Seconds = distance.Seconds;
