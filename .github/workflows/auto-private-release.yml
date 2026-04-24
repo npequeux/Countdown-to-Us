@@ -404,12 +404,12 @@ jobs:
           entries = [f'        "images/{files[i]}"' for i in sorted(files)]
           local_images = ',\n'.join(entries)
           path = 'maui/CountdownToUs.Maui/Components/Home.razor'
-          with open(path, 'r') as f:
+          with open(path, 'r', encoding='utf-8') as f:
               content = f.read()
           pattern = r'(private static readonly string\[\] DefaultImages = new\[\]\s*\n\s*\{).*?(\n\s*\};)'
           replacement = r'\g<1>\n' + local_images + r'\g<2>'
           new_content = re.sub(pattern, replacement, content, flags=re.DOTALL)
-          with open(path, 'w') as f:
+          with open(path, 'w', encoding='utf-8') as f:
               f.write(new_content)
           print(f"Patched {path} with {len(files)} image(s)")
           '@
