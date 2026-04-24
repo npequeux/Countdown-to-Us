@@ -154,9 +154,9 @@ jobs:
             VERSION="${GITHUB_REF#refs/tags/}"
           fi
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
-          VERSION_STRIPPED="${VERSION#v}"
-          # Strip any "private-" prefix before parsing semver
-          VERSION_STRIPPED="${VERSION_STRIPPED#private-}"
+          # Strip "private-" prefix first, then strip leading "v"
+          VERSION_STRIPPED="${VERSION#private-}"
+          VERSION_STRIPPED="${VERSION_STRIPPED#v}"
           MAJOR=$(echo "${VERSION_STRIPPED}" | cut -d. -f1)
           MINOR=$(echo "${VERSION_STRIPPED}" | cut -d. -f2)
           PATCH=$(echo "${VERSION_STRIPPED}" | cut -d. -f3 | grep -oE '^[0-9]+')
@@ -365,30 +365,34 @@ jobs:
       - name: Patch DefaultImages to use local private images
         shell: pwsh
         run: |
-          python3 @"
-          import re, os
+          $script = @'
+import re, os
 
-          img_dir = 'maui/CountdownToUs.Maui/wwwroot/images'
-          files = {}
-          for f in os.listdir(img_dir):
-              if f.endswith('.jpg') or f.endswith('.png'):
-                  try:
-                      files[int(f.split('.')[0])] = f
-                  except ValueError:
-                      pass
+img_dir = 'maui/CountdownToUs.Maui/wwwroot/images'
+files = {}
+for f in os.listdir(img_dir):
+    if f.endswith('.jpg') or f.endswith('.png'):
+        try:
+            files[int(f.split('.')[0])] = f
+        except ValueError:
+            pass
 
-          entries = [f'        "images/{files[i]}"' for i in sorted(files)]
-          local_images = ',\n'.join(entries)
-          path = 'maui/CountdownToUs.Maui/Components/Home.razor'
-          with open(path, 'r') as f:
-              content = f.read()
-          pattern = r'(private static readonly string\[\] DefaultImages = new\[\]\s*\n\s*\{).*?(\n\s*\};)'
-          replacement = r'\g<1>\n' + local_images + r'\g<2>'
-          new_content = re.sub(pattern, replacement, content, flags=re.DOTALL)
-          with open(path, 'w') as f:
-              f.write(new_content)
-          print(f"Patched {path} with {len(files)} image(s)")
-          "@
+entries = [f'        "images/{files[i]}"' for i in sorted(files)]
+local_images = ',\n'.join(entries)
+path = 'maui/CountdownToUs.Maui/Components/Home.razor'
+with open(path, 'r') as f:
+    content = f.read()
+pattern = r'(private static readonly string\[\] DefaultImages = new\[\]\s*\n\s*\{).*?(\n\s*\};)'
+replacement = r'\g<1>\n' + local_images + r'\g<2>'
+new_content = re.sub(pattern, replacement, content, flags=re.DOTALL)
+with open(path, 'w') as f:
+    f.write(new_content)
+print(f"Patched {path} with {len(files)} image(s)")
+'@
+          $tmp = [System.IO.Path]::GetTempFileName() + ".py"
+          [System.IO.File]::WriteAllText($tmp, $script)
+          python3 $tmp
+          Remove-Item $tmp
 
       - name: Setup .NET 10
         uses: actions/setup-dotnet@v4
