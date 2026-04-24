@@ -2,6 +2,8 @@
 
 [![Blazor Build](https://github.com/npequeux/Countdown-to-Us/actions/workflows/blazor-build.yml/badge.svg)](https://github.com/npequeux/Countdown-to-Us/actions/workflows/blazor-build.yml)
 [![MAUI Build](https://github.com/npequeux/Countdown-to-Us/actions/workflows/maui-build.yml/badge.svg)](https://github.com/npequeux/Countdown-to-Us/actions/workflows/maui-build.yml)
+[![Latest Release](https://img.shields.io/github/v/release/npequeux/Countdown-to-Us?filter=v*&label=latest%20release&color=blue)](https://github.com/npequeux/Countdown-to-Us/releases/latest)
+[![Latest Private Release](https://img.shields.io/github/v/release/npequeux/Countdown-to-Us?filter=private-v*&label=latest%20private%20release&color=blueviolet)](https://github.com/npequeux/Countdown-to-Us/releases?q=private-v&expanded=true)
 
 A beautiful countdown timer displaying the time remaining until October 1, 2028. Built entirely in C# with .NET 10, available as:
 
