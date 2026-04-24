@@ -59,6 +59,7 @@ jobs:
           IMG10: ${{ secrets.PRIVATE_IMAGE_10_BASE64 }}
         run: |
           mkdir -p blazor/CountdownToUs/wwwroot/images
+          saved=0
           for i in 1 2 3 4 5 6 7 8 9 10; do
             varname="IMG$i"
             val="${!varname}"
@@ -76,8 +77,13 @@ jobs:
               fi
               mv "$tmpfile" "blazor/CountdownToUs/wwwroot/images/${i}.${ext}"
               echo "Saved private image $i as ${i}.${ext}"
+              saved=$((saved+1))
             fi
           done
+          if [ "$saved" -eq 0 ]; then
+            echo "No PRIVATE_IMAGE secrets set — using Us.jpg as default"
+            cp Us.jpg blazor/CountdownToUs/wwwroot/images/1.jpg
+          fi
 
       - name: Patch DefaultImages to use local private images
         run: |
@@ -93,20 +99,17 @@ jobs:
                   except ValueError:
                       pass
 
-          if not files:
-              print("No private images found — keeping Unsplash defaults.")
-          else:
-              entries = [f'        "images/{files[i]}"' for i in sorted(files)]
-              local_images = ',\n'.join(entries)
-              path = 'blazor/CountdownToUs/Pages/Home.razor'
-              with open(path, 'r') as f:
-                  content = f.read()
-              pattern = r'(private static readonly string\[\] DefaultImages = new\[\]\s*\n\s*\{).*?(\n\s*\};)'
-              replacement = r'\g<1>\n' + local_images + r'\g<2>'
-              new_content = re.sub(pattern, replacement, content, flags=re.DOTALL)
-              with open(path, 'w') as f:
-                  f.write(new_content)
-              print(f"Patched {path} with {len(files)} private image(s)")
+          entries = [f'        "images/{files[i]}"' for i in sorted(files)]
+          local_images = ',\n'.join(entries)
+          path = 'blazor/CountdownToUs/Pages/Home.razor'
+          with open(path, 'r') as f:
+              content = f.read()
+          pattern = r'(private static readonly string\[\] DefaultImages = new\[\]\s*\n\s*\{).*?(\n\s*\};)'
+          replacement = r'\g<1>\n' + local_images + r'\g<2>'
+          new_content = re.sub(pattern, replacement, content, flags=re.DOTALL)
+          with open(path, 'w') as f:
+              f.write(new_content)
+          print(f"Patched {path} with {len(files)} image(s)")
           PYEOF
 
       - name: Setup .NET 10
@@ -175,6 +178,7 @@ jobs:
           IMG10: ${{ secrets.PRIVATE_IMAGE_10_BASE64 }}
         run: |
           mkdir -p maui/CountdownToUs.Maui/wwwroot/images
+          saved=0
           for i in 1 2 3 4 5 6 7 8 9 10; do
             varname="IMG$i"
             val="${!varname}"
@@ -192,8 +196,13 @@ jobs:
               fi
               mv "$tmpfile" "maui/CountdownToUs.Maui/wwwroot/images/${i}.${ext}"
               echo "Saved private image $i as ${i}.${ext}"
+              saved=$((saved+1))
             fi
           done
+          if [ "$saved" -eq 0 ]; then
+            echo "No PRIVATE_IMAGE secrets set — using Us.jpg as default"
+            cp Us.jpg maui/CountdownToUs.Maui/wwwroot/images/1.jpg
+          fi
 
       - name: Patch DefaultImages to use local private images
         run: |
@@ -209,20 +218,17 @@ jobs:
                   except ValueError:
                       pass
 
-          if not files:
-              print("No private images found — keeping Unsplash defaults.")
-          else:
-              entries = [f'        "images/{files[i]}"' for i in sorted(files)]
-              local_images = ',\n'.join(entries)
-              path = 'maui/CountdownToUs.Maui/Components/Home.razor'
-              with open(path, 'r') as f:
-                  content = f.read()
-              pattern = r'(private static readonly string\[\] DefaultImages = new\[\]\s*\n\s*\{).*?(\n\s*\};)'
-              replacement = r'\g<1>\n' + local_images + r'\g<2>'
-              new_content = re.sub(pattern, replacement, content, flags=re.DOTALL)
-              with open(path, 'w') as f:
-                  f.write(new_content)
-              print(f"Patched {path} with {len(files)} private image(s)")
+          entries = [f'        "images/{files[i]}"' for i in sorted(files)]
+          local_images = ',\n'.join(entries)
+          path = 'maui/CountdownToUs.Maui/Components/Home.razor'
+          with open(path, 'r') as f:
+              content = f.read()
+          pattern = r'(private static readonly string\[\] DefaultImages = new\[\]\s*\n\s*\{).*?(\n\s*\};)'
+          replacement = r'\g<1>\n' + local_images + r'\g<2>'
+          new_content = re.sub(pattern, replacement, content, flags=re.DOTALL)
+          with open(path, 'w') as f:
+              f.write(new_content)
+          print(f"Patched {path} with {len(files)} image(s)")
           PYEOF
 
       - name: Setup .NET 10
@@ -334,6 +340,7 @@ jobs:
             1 = $env:IMG1; 2 = $env:IMG2; 3 = $env:IMG3; 4 = $env:IMG4; 5 = $env:IMG5
             6 = $env:IMG6; 7 = $env:IMG7; 8 = $env:IMG8; 9 = $env:IMG9; 10 = $env:IMG10
           }
+          $saved = 0
           foreach ($i in 1..10) {
             $val = $envVars[$i]
             if (-not [string]::IsNullOrEmpty($val)) {
@@ -347,7 +354,12 @@ jobs:
               $outPath = "maui/CountdownToUs.Maui/wwwroot/images/${i}.${ext}"
               [IO.File]::WriteAllBytes($outPath, $bytes)
               Write-Host "Saved private image $i as ${i}.${ext}"
+              $saved++
             }
+          }
+          if ($saved -eq 0) {
+            Write-Host "No PRIVATE_IMAGE secrets set — using Us.jpg as default"
+            Copy-Item "Us.jpg" "maui/CountdownToUs.Maui/wwwroot/images/1.jpg"
           }
 
       - name: Patch DefaultImages to use local private images
@@ -365,20 +377,17 @@ jobs:
                   except ValueError:
                       pass
 
-          if not files:
-              print("No private images found — keeping Unsplash defaults.")
-          else:
-              entries = [f'        "images/{files[i]}"' for i in sorted(files)]
-              local_images = ',\n'.join(entries)
-              path = 'maui/CountdownToUs.Maui/Components/Home.razor'
-              with open(path, 'r') as f:
-                  content = f.read()
-              pattern = r'(private static readonly string\[\] DefaultImages = new\[\]\s*\n\s*\{).*?(\n\s*\};)'
-              replacement = r'\g<1>\n' + local_images + r'\g<2>'
-              new_content = re.sub(pattern, replacement, content, flags=re.DOTALL)
-              with open(path, 'w') as f:
-                  f.write(new_content)
-              print(f"Patched {path} with {len(files)} private image(s)")
+          entries = [f'        "images/{files[i]}"' for i in sorted(files)]
+          local_images = ',\n'.join(entries)
+          path = 'maui/CountdownToUs.Maui/Components/Home.razor'
+          with open(path, 'r') as f:
+              content = f.read()
+          pattern = r'(private static readonly string\[\] DefaultImages = new\[\]\s*\n\s*\{).*?(\n\s*\};)'
+          replacement = r'\g<1>\n' + local_images + r'\g<2>'
+          new_content = re.sub(pattern, replacement, content, flags=re.DOTALL)
+          with open(path, 'w') as f:
+              f.write(new_content)
+          print(f"Patched {path} with {len(files)} image(s)")
           "@
 
       - name: Setup .NET 10
@@ -467,6 +476,7 @@ jobs:
           IMG10: ${{ secrets.PRIVATE_IMAGE_10_BASE64 }}
         run: |
           mkdir -p blazor/CountdownToUs/wwwroot/images
+          saved=0
           for i in 1 2 3 4 5 6 7 8 9 10; do
             varname="IMG$i"
             val="${!varname}"
@@ -484,8 +494,13 @@ jobs:
               fi
               mv "$tmpfile" "blazor/CountdownToUs/wwwroot/images/${i}.${ext}"
               echo "Saved private image $i as ${i}.${ext}"
+              saved=$((saved+1))
             fi
           done
+          if [ "$saved" -eq 0 ]; then
+            echo "No PRIVATE_IMAGE secrets set — using Us.jpg as default"
+            cp Us.jpg blazor/CountdownToUs/wwwroot/images/1.jpg
+          fi
 
       - name: Patch DefaultImages to use local private images
         run: |
@@ -501,20 +516,17 @@ jobs:
                   except ValueError:
                       pass
 
-          if not files:
-              print("No private images found — keeping Unsplash defaults.")
-          else:
-              entries = [f'        "images/{files[i]}"' for i in sorted(files)]
-              local_images = ',\n'.join(entries)
-              path = 'blazor/CountdownToUs/Pages/Home.razor'
-              with open(path, 'r') as f:
-                  content = f.read()
-              pattern = r'(private static readonly string\[\] DefaultImages = new\[\]\s*\n\s*\{).*?(\n\s*\};)'
-              replacement = r'\g<1>\n' + local_images + r'\g<2>'
-              new_content = re.sub(pattern, replacement, content, flags=re.DOTALL)
-              with open(path, 'w') as f:
-                  f.write(new_content)
-              print(f"Patched {path} with {len(files)} private image(s)")
+          entries = [f'        "images/{files[i]}"' for i in sorted(files)]
+          local_images = ',\n'.join(entries)
+          path = 'blazor/CountdownToUs/Pages/Home.razor'
+          with open(path, 'r') as f:
+              content = f.read()
+          pattern = r'(private static readonly string\[\] DefaultImages = new\[\]\s*\n\s*\{).*?(\n\s*\};)'
+          replacement = r'\g<1>\n' + local_images + r'\g<2>'
+          new_content = re.sub(pattern, replacement, content, flags=re.DOTALL)
+          with open(path, 'w') as f:
+              f.write(new_content)
+          print(f"Patched {path} with {len(files)} image(s)")
           PYEOF
 
       - name: Setup .NET 10
