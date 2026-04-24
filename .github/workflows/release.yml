@@ -106,19 +106,13 @@ jobs:
             echo "KEY_ALIAS=$SIGNING_KEY_ALIAS" >> "$GITHUB_ENV"
             echo "KEY_PASS=$SIGNING_KEY_PASSWORD" >> "$GITHUB_ENV"
           else
-            KEYSTORE_PASS=$(openssl rand -hex 16)
-            echo "KEYSTORE_PASS=$KEYSTORE_PASS" >> "$GITHUB_ENV"
-            echo "KEY_ALIAS=release" >> "$GITHUB_ENV"
-            echo "KEY_PASS=$KEYSTORE_PASS" >> "$GITHUB_ENV"
-            keytool -genkeypair -v \
-              -keystore "${{ github.workspace }}/release-key.jks" \
-              -alias release \
-              -keyalg RSA \
-              -keysize 2048 \
-              -validity 10000 \
-              -dname "CN=Countdown to Us, O=CountdownToUs, C=US" \
-              -storepass "$KEYSTORE_PASS" \
-              -keypass "$KEYSTORE_PASS"
+            echo "ERROR: ANDROID_KEYSTORE_BASE64 secret is not set."
+            echo "A consistent signing keystore is required so that users can"
+            echo "install newer APKs over existing installations without a"
+            echo "signature-mismatch conflict."
+            echo "Please configure the ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD,"
+            echo "ANDROID_KEY_ALIAS, and ANDROID_KEY_PASSWORD repository secrets."
+            exit 1
           fi
 
       - name: Build Android APK
