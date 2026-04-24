@@ -20,12 +20,19 @@ on:
     workflows: ["Auto Release on Merge to Master"]
     types:
       - completed
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Private release version (e.g., private-v1.0.0)'
+        required: true
+        default: 'private-v1.0.0'
 
 jobs:
-  # ── 1. Only proceed when the public release succeeded on the main branch ────
+  # ── 1. Only proceed when the public release succeeded on the main branch,
+  #        or when triggered manually via workflow_dispatch ──────────────────
   check-version:
     name: Check Version
-    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main' }}
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main') }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -43,21 +50,32 @@ jobs:
       - name: Determine private release version (auto-increment patch if tag exists)
         id: version
         run: |
-          BASE_VERSION=$(grep -oP '(?<=<ApplicationDisplayVersion>)[^<]+' maui/CountdownToUs.Maui/CountdownToUs.Maui.csproj)
-          MAJOR=$(echo "${BASE_VERSION}" | cut -d. -f1)
-          MINOR=$(echo "${BASE_VERSION}" | cut -d. -f2)
-          PATCH=$(echo "${BASE_VERSION}" | cut -d. -f3 | grep -oE '^[0-9]+')
-          PATCH=${PATCH:-0}
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            CANDIDATE="${{ github.event.inputs.version }}"
+            # Ensure it has the private-v prefix
+            [[ "$CANDIDATE" != private-v* ]] && CANDIDATE="private-v${CANDIDATE#v}"
+            VERSION="${CANDIDATE#private-v}"
+            MAJOR=$(echo "${VERSION}" | cut -d. -f1)
+            MINOR=$(echo "${VERSION}" | cut -d. -f2)
+            PATCH=$(echo "${VERSION}" | cut -d. -f3 | grep -oE '^[0-9]+')
+            PATCH=${PATCH:-0}
+          else
+            BASE_VERSION=$(grep -oP '(?<=<ApplicationDisplayVersion>)[^<]+' maui/CountdownToUs.Maui/CountdownToUs.Maui.csproj)
+            MAJOR=$(echo "${BASE_VERSION}" | cut -d. -f1)
+            MINOR=$(echo "${BASE_VERSION}" | cut -d. -f2)
+            PATCH=$(echo "${BASE_VERSION}" | cut -d. -f3 | grep -oE '^[0-9]+')
+            PATCH=${PATCH:-0}
 
-          EXISTING_TAGS=$(git ls-remote --tags origin | awk '{print $2}' | sed 's|refs/tags/||')
+            EXISTING_TAGS=$(git ls-remote --tags origin | awk '{print $2}' | sed 's|refs/tags/||')
 
-          CANDIDATE="private-v${MAJOR}.${MINOR}.${PATCH}"
-
-          while echo "${EXISTING_TAGS}" | grep -qx "${CANDIDATE}"; do
-            echo "⏭  Tag ${CANDIDATE} already exists – incrementing patch version."
-            PATCH=$((PATCH + 1))
             CANDIDATE="private-v${MAJOR}.${MINOR}.${PATCH}"
-          done
+
+            while echo "${EXISTING_TAGS}" | grep -qx "${CANDIDATE}"; do
+              echo "⏭  Tag ${CANDIDATE} already exists – incrementing patch version."
+              PATCH=$((PATCH + 1))
+              CANDIDATE="private-v${MAJOR}.${MINOR}.${PATCH}"
+            done
+          fi
 
           echo "version=${CANDIDATE}" >> $GITHUB_OUTPUT
           echo "version_name=${MAJOR}.${MINOR}.${PATCH}" >> $GITHUB_OUTPUT
