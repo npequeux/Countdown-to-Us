@@ -172,6 +172,11 @@ The app starts a local web server and opens your browser at `http://localhost:50
 
 ## Downloading Pre-built Packages
 
+| Release type | Link |
+|---|---|
+| 📦 Latest Standard Release | [View on GitHub](https://github.com/npequeux/Countdown-to-Us/releases/latest) |
+| 🔒 Latest Private Release | [View on GitHub](https://github.com/npequeux/Countdown-to-Us/releases?q=private-v&expanded=true) |
+
 All platform packages are attached to every versioned release on the [Releases page](https://github.com/npequeux/Countdown-to-Us/releases):
 
 - `countdown-to-us-blazor-*.zip` — Blazor WebAssembly web app (extract and serve statically)
