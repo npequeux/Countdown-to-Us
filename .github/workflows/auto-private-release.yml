@@ -68,20 +68,32 @@ jobs:
 
             EXISTING_TAGS=$(git ls-remote --tags origin | awk '{print $2}' | sed 's|refs/tags/||')
 
-            CANDIDATE="private-v${MAJOR}.${MINOR}.${PATCH}"
+            # Find the highest patch number across ALL APK releases (both public v*
+            # and private private-v*) so the private APK version_code is always
+            # higher than any previously installed APK of either variant.
+            # Initialize to PATCH-1 so that when no matching tags exist, PATCH
+            # remains at the .csproj base value (MAX_PATCH+1 = (PATCH-1)+1 = PATCH).
+            MAX_PATCH=$((PATCH - 1))
+            while IFS= read -r tag; do
+              if [[ "$tag" =~ ^(private-v|v)${MAJOR}\.${MINOR}\.([0-9]+)$ ]]; then
+                TAG_PATCH="${BASH_REMATCH[2]}"
+                if (( TAG_PATCH > MAX_PATCH )); then
+                  MAX_PATCH=${TAG_PATCH}
+                fi
+              fi
+            done <<< "${EXISTING_TAGS}"
+            # MAX_PATCH is the true maximum across all v* and private-v* tags, so
+            # private-v${MAJOR}.${MINOR}.$((MAX_PATCH+1)) is guaranteed to be unused.
+            PATCH=$((MAX_PATCH + 1))
 
-            while echo "${EXISTING_TAGS}" | grep -qx "${CANDIDATE}"; do
-              echo "⏭  Tag ${CANDIDATE} already exists – incrementing patch version."
-              PATCH=$((PATCH + 1))
-              CANDIDATE="private-v${MAJOR}.${MINOR}.${PATCH}"
-            done
+            CANDIDATE="private-v${MAJOR}.${MINOR}.${PATCH}"
           fi
 
           echo "version=${CANDIDATE}" >> $GITHUB_OUTPUT
           echo "version_name=${MAJOR}.${MINOR}.${PATCH}" >> $GITHUB_OUTPUT
           VERSION_CODE=$((MAJOR * 10000 + MINOR * 100 + PATCH))
           echo "version_code=${VERSION_CODE}" >> $GITHUB_OUTPUT
-          echo "🆕 Using private version ${CANDIDATE} – starting private release pipeline."
+          echo "🆕 Using private version ${CANDIDATE} (version_code=${VERSION_CODE}) – starting private release pipeline."
 
   # ── 2a. Build Private Blazor WebAssembly ────────────────────────────────────
   build-blazor:
@@ -669,8 +681,11 @@ jobs:
           PATCH=$(echo "${VERSION}" | cut -d. -f3)
 
           CANDIDATE="private-v${MAJOR}.${MINOR}.${PATCH}"
-          while git rev-parse "${CANDIDATE}" >/dev/null 2>&1; do
-            echo "⏭  Tag ${CANDIDATE} already exists – incrementing patch version."
+          # Check both public (v*) and private (private-v*) tags to avoid
+          # version_code collisions between the two APK variants.
+          while git rev-parse "${CANDIDATE}" >/dev/null 2>&1 || \
+                git rev-parse "v${MAJOR}.${MINOR}.${PATCH}" >/dev/null 2>&1; do
+            echo "⏭  Tag ${CANDIDATE} (or its public counterpart) already exists – incrementing patch version."
             PATCH=$((PATCH + 1))
             CANDIDATE="private-v${MAJOR}.${MINOR}.${PATCH}"
           done
