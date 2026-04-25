@@ -55,6 +55,7 @@ jobs:
           IMG9: ${{ secrets.PRIVATE_IMAGE_9_BASE64 }}
           IMG10: ${{ secrets.PRIVATE_IMAGE_10_BASE64 }}
         run: |
+          rm -rf blazor/CountdownToUs/wwwroot/images
           mkdir -p blazor/CountdownToUs/wwwroot/images
           saved=0
           for i in 1 2 3 4 5 6 7 8 9 10; do
@@ -174,6 +175,7 @@ jobs:
           IMG9: ${{ secrets.PRIVATE_IMAGE_9_BASE64 }}
           IMG10: ${{ secrets.PRIVATE_IMAGE_10_BASE64 }}
         run: |
+          rm -rf maui/CountdownToUs.Maui/wwwroot/images
           mkdir -p maui/CountdownToUs.Maui/wwwroot/images
           saved=0
           for i in 1 2 3 4 5 6 7 8 9 10; do
@@ -326,6 +328,7 @@ jobs:
           IMG9: ${{ secrets.PRIVATE_IMAGE_9_BASE64 }}
           IMG10: ${{ secrets.PRIVATE_IMAGE_10_BASE64 }}
         run: |
+          Remove-Item -Recurse -Force "maui/CountdownToUs.Maui/wwwroot/images" -ErrorAction SilentlyContinue
           New-Item -ItemType Directory -Force -Path "maui/CountdownToUs.Maui/wwwroot/images" | Out-Null
           $envVars = @{
             1 = $env:IMG1; 2 = $env:IMG2; 3 = $env:IMG3; 4 = $env:IMG4; 5 = $env:IMG5
@@ -470,6 +473,7 @@ print(f"Patched {path} with {len(files)} image(s)")
           IMG9: ${{ secrets.PRIVATE_IMAGE_9_BASE64 }}
           IMG10: ${{ secrets.PRIVATE_IMAGE_10_BASE64 }}
         run: |
+          rm -rf blazor/CountdownToUs/wwwroot/images
           mkdir -p blazor/CountdownToUs/wwwroot/images
           saved=0
           for i in 1 2 3 4 5 6 7 8 9 10; do
