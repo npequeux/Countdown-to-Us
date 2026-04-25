@@ -593,7 +593,7 @@ print(f"Patched {path} with {len(files)} image(s)")
         run: find release-assets -type f | sort
 
       - name: Create Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.get_version.outputs.version }}
           name: Private Release ${{ steps.get_version.outputs.version }}

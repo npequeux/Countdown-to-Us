@@ -107,16 +107,34 @@ jobs:
             ID="${PHOTOS[$n]}"
             URL="https://images.unsplash.com/${ID}?auto=format&fit=crop&w=1920&q=80"
             echo "Downloading wallpaper $n: $URL"
-            curl -L --max-time 60 -s "$URL" -o "blazor/CountdownToUs/wwwroot/images/${n}.jpg"
-            echo "  Saved images/${n}.jpg ($(du -h blazor/CountdownToUs/wwwroot/images/${n}.jpg | cut -f1))"
+            if curl -fL --max-time 60 -s "$URL" -o "blazor/CountdownToUs/wwwroot/images/${n}.jpg"; then
+              echo "  Saved images/${n}.jpg ($(du -h blazor/CountdownToUs/wwwroot/images/${n}.jpg | cut -f1))"
+            else
+              echo "  Warning: Failed to download image $n (HTTP error or timeout), skipping"
+              rm -f "blazor/CountdownToUs/wwwroot/images/${n}.jpg"
+            fi
           done
+          count=$(find blazor/CountdownToUs/wwwroot/images -name '*.jpg' | wc -l)
+          if [ "$count" -eq 0 ]; then
+            echo "Error: No wallpaper images could be downloaded"
+            exit 1
+          fi
+          echo "Downloaded $count wallpaper image(s)"
 
       - name: Patch DefaultImages to use local wallpaper images
         run: |
           python3 << 'PYEOF'
-          import re
+          import re, os
 
-          entries = [f'        "images/{i}.jpg"' for i in range(1, 11)]
+          img_dir = 'blazor/CountdownToUs/wwwroot/images'
+          files = {}
+          for f in os.listdir(img_dir):
+              if f.endswith('.jpg') or f.endswith('.png'):
+                  try:
+                      files[int(f.split('.')[0])] = f
+                  except ValueError:
+                      pass
+          entries = [f'        "images/{files[i]}"' for i in sorted(files)]
           local_images = ',\n'.join(entries)
           path = 'blazor/CountdownToUs/Pages/Home.razor'
           with open(path, 'r') as f:
@@ -126,7 +144,7 @@ jobs:
           new_content = re.sub(pattern, replacement, content, flags=re.DOTALL)
           with open(path, 'w') as f:
               f.write(new_content)
-          print(f"Patched {path} with 10 wallpaper image(s)")
+          print(f"Patched {path} with {len(files)} wallpaper image(s)")
           PYEOF
 
       - name: Setup .NET 10
@@ -183,16 +201,34 @@ jobs:
             ID="${PHOTOS[$n]}"
             URL="https://images.unsplash.com/${ID}?auto=format&fit=crop&w=1920&q=80"
             echo "Downloading wallpaper $n: $URL"
-            curl -L --max-time 60 -s "$URL" -o "maui/CountdownToUs.Maui/wwwroot/images/${n}.jpg"
-            echo "  Saved images/${n}.jpg ($(du -h maui/CountdownToUs.Maui/wwwroot/images/${n}.jpg | cut -f1))"
+            if curl -fL --max-time 60 -s "$URL" -o "maui/CountdownToUs.Maui/wwwroot/images/${n}.jpg"; then
+              echo "  Saved images/${n}.jpg ($(du -h maui/CountdownToUs.Maui/wwwroot/images/${n}.jpg | cut -f1))"
+            else
+              echo "  Warning: Failed to download image $n (HTTP error or timeout), skipping"
+              rm -f "maui/CountdownToUs.Maui/wwwroot/images/${n}.jpg"
+            fi
           done
+          count=$(find maui/CountdownToUs.Maui/wwwroot/images -name '*.jpg' | wc -l)
+          if [ "$count" -eq 0 ]; then
+            echo "Error: No wallpaper images could be downloaded"
+            exit 1
+          fi
+          echo "Downloaded $count wallpaper image(s)"
 
       - name: Patch DefaultImages to use local wallpaper images
         run: |
           python3 << 'PYEOF'
-          import re
+          import re, os
 
-          entries = [f'        "images/{i}.jpg"' for i in range(1, 11)]
+          img_dir = 'maui/CountdownToUs.Maui/wwwroot/images'
+          files = {}
+          for f in os.listdir(img_dir):
+              if f.endswith('.jpg') or f.endswith('.png'):
+                  try:
+                      files[int(f.split('.')[0])] = f
+                  except ValueError:
+                      pass
+          entries = [f'        "images/{files[i]}"' for i in sorted(files)]
           local_images = ',\n'.join(entries)
           path = 'maui/CountdownToUs.Maui/Components/Home.razor'
           with open(path, 'r') as f:
@@ -202,7 +238,7 @@ jobs:
           new_content = re.sub(pattern, replacement, content, flags=re.DOTALL)
           with open(path, 'w') as f:
               f.write(new_content)
-          print(f"Patched {path} with 10 wallpaper image(s)")
+          print(f"Patched {path} with {len(files)} wallpaper image(s)")
           PYEOF
 
       - name: Setup .NET 10
@@ -308,22 +344,42 @@ jobs:
             9  = "photo-1548574505-5e239809ee19"
             10 = "photo-1566438480900-0609be27a4be"
           }
+          $downloaded = 0
           foreach ($n in 1..10) {
             $id  = $photos[$n]
             $url = "https://images.unsplash.com/${id}?auto=format&fit=crop&w=1920&q=80"
             $out = "maui/CountdownToUs.Maui/wwwroot/images/${n}.jpg"
             Write-Host "Downloading wallpaper ${n}: $url"
-            Invoke-WebRequest -Uri $url -OutFile $out -TimeoutSec 60
-            Write-Host "  Saved images/${n}.jpg"
+            try {
+              Invoke-WebRequest -Uri $url -OutFile $out -TimeoutSec 60
+              Write-Host "  Saved images/${n}.jpg"
+              $downloaded++
+            } catch {
+              Write-Warning "  Failed to download image ${n}: $($_.Exception.Message)"
+              if (Test-Path $out) { Remove-Item $out }
+            }
           }
+          if ($downloaded -eq 0) {
+            Write-Error "No wallpaper images could be downloaded"
+            exit 1
+          }
+          Write-Host "Downloaded $downloaded wallpaper image(s)"
 
       - name: Patch DefaultImages to use local wallpaper images
         shell: pwsh
         run: |
           $script = @'
-          import re
+          import re, os
 
-          entries = [f'        "images/{i}.jpg"' for i in range(1, 11)]
+          img_dir = 'maui/CountdownToUs.Maui/wwwroot/images'
+          files = {}
+          for f in os.listdir(img_dir):
+              if f.endswith('.jpg') or f.endswith('.png'):
+                  try:
+                      files[int(f.split('.')[0])] = f
+                  except ValueError:
+                      pass
+          entries = [f'        "images/{files[i]}"' for i in sorted(files)]
           local_images = ',\n'.join(entries)
           path = 'maui/CountdownToUs.Maui/Components/Home.razor'
           with open(path, 'r', encoding='utf-8') as f:
@@ -333,7 +389,7 @@ jobs:
           new_content = re.sub(pattern, replacement, content, flags=re.DOTALL)
           with open(path, 'w', encoding='utf-8') as f:
               f.write(new_content)
-          print(f"Patched {path} with 10 wallpaper image(s)")
+          print(f"Patched {path} with {len(files)} wallpaper image(s)")
           '@
           $tmp = [System.IO.Path]::GetTempFileName() + ".py"
           [System.IO.File]::WriteAllText($tmp, $script)
@@ -424,16 +480,34 @@ jobs:
             ID="${PHOTOS[$n]}"
             URL="https://images.unsplash.com/${ID}?auto=format&fit=crop&w=1920&q=80"
             echo "Downloading wallpaper $n: $URL"
-            curl -L --max-time 60 -s "$URL" -o "blazor/CountdownToUs/wwwroot/images/${n}.jpg"
-            echo "  Saved images/${n}.jpg ($(du -h blazor/CountdownToUs/wwwroot/images/${n}.jpg | cut -f1))"
+            if curl -fL --max-time 60 -s "$URL" -o "blazor/CountdownToUs/wwwroot/images/${n}.jpg"; then
+              echo "  Saved images/${n}.jpg ($(du -h blazor/CountdownToUs/wwwroot/images/${n}.jpg | cut -f1))"
+            else
+              echo "  Warning: Failed to download image $n (HTTP error or timeout), skipping"
+              rm -f "blazor/CountdownToUs/wwwroot/images/${n}.jpg"
+            fi
           done
+          count=$(find blazor/CountdownToUs/wwwroot/images -name '*.jpg' | wc -l)
+          if [ "$count" -eq 0 ]; then
+            echo "Error: No wallpaper images could be downloaded"
+            exit 1
+          fi
+          echo "Downloaded $count wallpaper image(s)"
 
       - name: Patch DefaultImages to use local wallpaper images
         run: |
           python3 << 'PYEOF'
-          import re
+          import re, os
 
-          entries = [f'        "images/{i}.jpg"' for i in range(1, 11)]
+          img_dir = 'blazor/CountdownToUs/wwwroot/images'
+          files = {}
+          for f in os.listdir(img_dir):
+              if f.endswith('.jpg') or f.endswith('.png'):
+                  try:
+                      files[int(f.split('.')[0])] = f
+                  except ValueError:
+                      pass
+          entries = [f'        "images/{files[i]}"' for i in sorted(files)]
           local_images = ',\n'.join(entries)
           path = 'blazor/CountdownToUs/Pages/Home.razor'
           with open(path, 'r') as f:
@@ -443,7 +517,7 @@ jobs:
           new_content = re.sub(pattern, replacement, content, flags=re.DOTALL)
           with open(path, 'w') as f:
               f.write(new_content)
-          print(f"Patched {path} with 10 wallpaper image(s)")
+          print(f"Patched {path} with {len(files)} wallpaper image(s)")
           PYEOF
 
       - name: Setup .NET 10
@@ -596,7 +670,7 @@ jobs:
           git push origin ${{ steps.final_version.outputs.version }}
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.final_version.outputs.version }}
           name: Wallpapers Release ${{ steps.final_version.outputs.version }}

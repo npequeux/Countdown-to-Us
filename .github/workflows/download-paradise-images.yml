@@ -39,18 +39,36 @@ jobs:
             ID="${PHOTOS[$n]}"
             URL="https://images.unsplash.com/${ID}?auto=format&fit=crop&w=1920&q=80"
             echo "Downloading image $n: $URL"
-            curl -L --max-time 60 -s "$URL" -o "blazor/CountdownToUs/wwwroot/images/${n}.jpg"
-            cp "blazor/CountdownToUs/wwwroot/images/${n}.jpg" "maui/CountdownToUs.Maui/wwwroot/images/${n}.jpg"
-            echo "  Saved images/${n}.jpg ($(du -h blazor/CountdownToUs/wwwroot/images/${n}.jpg | cut -f1))"
+            if curl -fL --max-time 60 -s "$URL" -o "blazor/CountdownToUs/wwwroot/images/${n}.jpg"; then
+              cp "blazor/CountdownToUs/wwwroot/images/${n}.jpg" "maui/CountdownToUs.Maui/wwwroot/images/${n}.jpg"
+              echo "  Saved images/${n}.jpg ($(du -h blazor/CountdownToUs/wwwroot/images/${n}.jpg | cut -f1))"
+            else
+              echo "  Warning: Failed to download image $n (HTTP error or timeout), skipping"
+              rm -f "blazor/CountdownToUs/wwwroot/images/${n}.jpg"
+            fi
           done
+          count=$(find blazor/CountdownToUs/wwwroot/images -name '*.jpg' | wc -l)
+          if [ "$count" -eq 0 ]; then
+            echo "Error: No images could be downloaded"
+            exit 1
+          fi
+          echo "Downloaded $count image(s)"
           ls -lh blazor/CountdownToUs/wwwroot/images/
 
       - name: Update DefaultImages in Blazor Home.razor
         run: |
           python3 << 'PYEOF'
-          import re
+          import re, os
 
-          entries = [f'        "images/{i}.jpg"' for i in range(1, 11)]
+          img_dir = 'blazor/CountdownToUs/wwwroot/images'
+          files = {}
+          for f in os.listdir(img_dir):
+              if f.endswith('.jpg') or f.endswith('.png'):
+                  try:
+                      files[int(f.split('.')[0])] = f
+                  except ValueError:
+                      pass
+          entries = [f'        "images/{files[i]}"' for i in sorted(files)]
           local_images = ',\n'.join(entries)
 
           for path in [
@@ -67,13 +85,13 @@ jobs:
 
             with open(path, 'w') as f:
               f.write(new_content)
-            print(f"Updated {path} with local image paths")
+            print(f"Updated {path} with {len(files)} local image path(s)")
           PYEOF
 
       - name: Commit and push real photos
         run: |
-          git config user.email "action@github.com"
-          git config user.name "GitHub Actions"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
           git add blazor/CountdownToUs/wwwroot/images/ \
                   maui/CountdownToUs.Maui/wwwroot/images/ \
                   blazor/CountdownToUs/Pages/Home.razor \
