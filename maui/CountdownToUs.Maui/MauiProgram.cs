@@ -17,6 +17,7 @@ public static class MauiProgram
             });
 
         builder.Services.AddMauiBlazorWebView();
+        builder.Services.AddSingleton<Services.IWallpaperService, WallpaperService>();
 
 #if DEBUG
         builder.Services.AddBlazorWebViewDeveloperTools();

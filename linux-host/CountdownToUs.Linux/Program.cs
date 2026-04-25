@@ -1,5 +1,16 @@
+using CountdownToUs.Linux.Services;
+
 var builder = WebApplication.CreateBuilder(args);
 builder.WebHost.UseUrls("http://localhost:5000");
+
+// Wallpaper services
+var wallpaperConfig = builder.Configuration
+    .GetSection("Wallpaper")
+    .Get<WallpaperConfig>() ?? new WallpaperConfig();
+
+builder.Services.AddSingleton(wallpaperConfig);
+builder.Services.AddSingleton<LinuxWallpaperService>();
+builder.Services.AddHostedService<WallpaperUpdateHostedService>();
 
 var app = builder.Build();
 
