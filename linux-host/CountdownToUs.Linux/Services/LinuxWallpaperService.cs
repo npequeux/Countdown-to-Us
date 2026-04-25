@@ -41,7 +41,9 @@ public class LinuxWallpaperService
         bool ok =
             await RunAsync("gsettings", $"set org.gnome.desktop.background picture-uri \"{uri}\"") &&
             // Also update the dark-mode variant (GNOME ≥ 42)
-            await RunAsync("gsettings", $"set org.gnome.desktop.background picture-uri-dark \"{uri}\"");
+            await RunAsync("gsettings", $"set org.gnome.desktop.background picture-uri-dark \"{uri}\"") &&
+            // Ensure the image fills the screen (cover / zoom), centered
+            await RunAsync("gsettings", "set org.gnome.desktop.background picture-options 'zoom'");
         if (ok) _logger.LogInformation("Wallpaper set via GNOME gsettings.");
         return ok;
     }
@@ -56,22 +58,28 @@ public class LinuxWallpaperService
     private async Task<bool> TryXfceAsync(string path)
     {
         // Try the most common XFCE property path; screen/monitor indices may vary.
-        bool ok = await RunAsync("xfconf-query",
-            $"-c xfce4-desktop -p /backdrop/screen0/monitor0/workspace0/last-image -s \"{path}\"");
+        bool ok =
+            await RunAsync("xfconf-query",
+                $"-c xfce4-desktop -p /backdrop/screen0/monitor0/workspace0/last-image -s \"{path}\"") &&
+            // Set image style to "Zoomed" (5 = cover/fill, centered) so the wallpaper fills the screen
+            await RunAsync("xfconf-query",
+                "-c xfce4-desktop -p /backdrop/screen0/monitor0/workspace0/image-style -s 5");
         if (ok) _logger.LogInformation("Wallpaper set via XFCE xfconf-query.");
         return ok;
     }
 
     private async Task<bool> TryFehAsync(string path)
     {
-        bool ok = await RunAsync("feh", $"--bg-scale \"{path}\"");
+        // --bg-fill scales to cover the screen while preserving aspect ratio (centered crop)
+        bool ok = await RunAsync("feh", $"--bg-fill \"{path}\"");
         if (ok) _logger.LogInformation("Wallpaper set via feh.");
         return ok;
     }
 
     private async Task<bool> TryNitrogenAsync(string path)
     {
-        bool ok = await RunAsync("nitrogen", $"--set-scaled \"{path}\"");
+        // --set-zoom scales to fill the screen (cover/centered crop)
+        bool ok = await RunAsync("nitrogen", $"--set-zoom \"{path}\"");
         if (ok) _logger.LogInformation("Wallpaper set via nitrogen.");
         return ok;
     }
