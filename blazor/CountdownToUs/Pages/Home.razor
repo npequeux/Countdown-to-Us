@@ -18,6 +18,38 @@
         </div>
     </div>
 
+    <div class="analog-clock" aria-label="@T("currentTime"): @CurrentTimeDisplay" role="img">
+        <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="50" cy="50" r="47" class="clock-face" />
+            @for (int i = 0; i < 60; i++)
+            {
+                if (i % 5 == 0)
+                {
+                    <line x1="50" y1="6" x2="50" y2="14"
+                          transform="@($"rotate({i * 6}, 50, 50)")"
+                          class="clock-hour-mark" />
+                }
+                else
+                {
+                    <line x1="50" y1="6" x2="50" y2="10"
+                          transform="@($"rotate({i * 6}, 50, 50)")"
+                          class="clock-minute-mark" />
+                }
+            }
+            <line x1="50" y1="50" x2="50" y2="24"
+                  transform="@ClockHourTransform"
+                  class="clock-hand-hour" />
+            <line x1="50" y1="50" x2="50" y2="16"
+                  transform="@ClockMinuteTransform"
+                  class="clock-hand-minute" />
+            <line x1="50" y1="57" x2="50" y2="12"
+                  transform="@ClockSecondTransform"
+                  class="clock-hand-second" />
+            <circle cx="50" cy="50" r="3" class="clock-center" />
+        </svg>
+        <div class="clock-digital">@CurrentTimeDisplay</div>
+    </div>
+
     <div class="countdown">
         <div class="time-unit">
             <span class="number">@Hours.ToString("D2")</span>
@@ -114,6 +146,7 @@
             ["alertSkippedPhotos"] = "Some photos could not be loaded and were skipped.",
             ["prevImage"] = "Previous image",
             ["nextImage"] = "Next image",
+            ["currentTime"] = "Current time",
             ["locale"] = "en-US"
         },
         ["fr"] = new()
@@ -133,6 +166,7 @@
             ["alertSkippedPhotos"] = "Certaines photos n'ont pas pu être chargées et ont été ignorées.",
             ["prevImage"] = "Image précédente",
             ["nextImage"] = "Image suivante",
+            ["currentTime"] = "Heure actuelle",
             ["locale"] = "fr-FR"
         },
         ["es"] = new()
@@ -152,6 +186,7 @@
             ["alertSkippedPhotos"] = "Algunas fotos no pudieron cargarse y fueron omitidas.",
             ["prevImage"] = "Imagen anterior",
             ["nextImage"] = "Imagen siguiente",
+            ["currentTime"] = "Hora actual",
             ["locale"] = "es-ES"
         },
         ["zh"] = new()
@@ -171,6 +206,7 @@
             ["alertSkippedPhotos"] = "部分照片无法加载，已被跳过。",
             ["prevImage"] = "上一张",
             ["nextImage"] = "下一张",
+            ["currentTime"] = "当前时间",
             ["locale"] = "zh-CN"
         }
     };
@@ -178,6 +214,26 @@
     private string _currentLang = "en";
     private System.Globalization.CultureInfo _currentCulture = System.Globalization.CultureInfo.CreateSpecificCulture("en-US");
     private string _lastBackgroundUrl = string.Empty;
+
+    // Analog clock
+    private DateTime _currentTime = DateTime.Now;
+    private string _currentTimeDisplay = DateTime.Now.ToString("T", System.Globalization.CultureInfo.CurrentCulture);
+    private string _clockHourTransform = "rotate(0, 50, 50)";
+    private string _clockMinuteTransform = "rotate(0, 50, 50)";
+    private string _clockSecondTransform = "rotate(0, 50, 50)";
+    private string CurrentTimeDisplay => _currentTimeDisplay;
+    private string ClockHourTransform => _clockHourTransform;
+    private string ClockMinuteTransform => _clockMinuteTransform;
+    private string ClockSecondTransform => _clockSecondTransform;
+
+    private void UpdateClockTransforms(DateTime now)
+    {
+        _currentTime = now;
+        _currentTimeDisplay = now.ToString("T", _currentCulture);
+        _clockHourTransform = $"rotate({((now.Hour % 12) * 30.0 + now.Minute * 0.5).ToString("F1", System.Globalization.CultureInfo.InvariantCulture)}, 50, 50)";
+        _clockMinuteTransform = $"rotate({(now.Minute * 6.0 + now.Second * 0.1).ToString("F1", System.Globalization.CultureInfo.InvariantCulture)}, 50, 50)";
+        _clockSecondTransform = $"rotate({(now.Second * 6.0).ToString("F0", System.Globalization.CultureInfo.InvariantCulture)}, 50, 50)";
+    }
 
     private string T(string key)
     {
@@ -276,6 +332,7 @@
     private void UpdateCountdown()
     {
         var now = DateTime.Now;
+        UpdateClockTransforms(now);
         var distance = _targetDate - now;
 
         if (distance <= TimeSpan.Zero)
@@ -325,6 +382,7 @@
     private async Task OnLanguageChanged()
     {
         _currentCulture = CreateCulture(_currentLang);
+        UpdateClockTransforms(DateTime.Now);
         await JS.InvokeVoidAsync("localStorage.setItem", "language", _currentLang);
         await JS.InvokeVoidAsync("setHtmlLang", T("locale").Split('-')[0]);
     }
