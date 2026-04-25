@@ -579,7 +579,8 @@
         {
             var imageBytes = await GetCurrentImageBytes();
             var data = BuildWallpaperData(imageBytes);
-            var png = Services.WallpaperGenerator.GeneratePng(data);
+            var (wpWidth, wpHeight) = GetWallpaperDimensions();
+            var png = Services.WallpaperGenerator.GeneratePng(data, wpWidth, wpHeight);
             await WallpaperService.SetWallpaperAsync(png);
             _wallpaperStatus = T("wallpaperSet");
         }
@@ -624,7 +625,33 @@
     private void OnWallpaperTick(object? sender, ElapsedEventArgs e)
         => InvokeAsync(SetWallpaperNow);
 
-    private Services.WallpaperData BuildWallpaperData(byte[]? imageBytes) => new(
+    /// <summary>
+    /// Returns the pixel dimensions to use when generating the wallpaper image.
+    /// On Android we use the actual display size in portrait orientation so the
+    /// wallpaper fills the screen without cropping or off-centre rendering.
+    /// All other platforms keep the default 1920×1080 landscape layout.
+    /// </summary>
+    private static (int width, int height) GetWallpaperDimensions()
+    {
+#if ANDROID
+        var info = DeviceDisplay.Current.MainDisplayInfo;
+        int w = (int)info.Width;
+        int h = (int)info.Height;
+        if (w > 0 && h > 0)
+        {
+            // Ensure portrait orientation (taller than wide).
+            if (w > h)
+                (w, h) = (h, w);
+            return (w, h);
+        }
+        // Fallback to a standard FHD portrait size when display info is unavailable.
+        return (1080, 1920);
+#else
+        return (1920, 1080);
+#endif
+    }
+
+
         TargetDate: _targetDate,
         TotalDays: TotalDays,
         Years: Years,
