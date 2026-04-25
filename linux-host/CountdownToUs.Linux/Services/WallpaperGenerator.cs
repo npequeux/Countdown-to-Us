@@ -65,7 +65,11 @@ public static class WallpaperGenerator
                     return;
                 }
             }
-            catch { /* fall through */ }
+            catch
+            {
+                // Image bytes may be corrupt or an unsupported format; fall through to the
+                // gradient background so wallpaper generation always produces a valid image.
+            }
         }
 
         using var shader = SKShader.CreateLinearGradient(

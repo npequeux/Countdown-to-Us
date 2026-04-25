@@ -583,8 +583,10 @@
             await WallpaperService.SetWallpaperAsync(png);
             _wallpaperStatus = T("wallpaperSet");
         }
-        catch
+        catch (Exception ex)
         {
+            // Surface a user-friendly message while capturing details for debug builds.
+            System.Diagnostics.Debug.WriteLine($"[WallpaperService] SetWallpaperAsync failed: {ex}");
             _wallpaperStatus = T("wallpaperError");
         }
         finally
@@ -646,7 +648,11 @@
             var commaIdx = src.IndexOf(',');
             if (commaIdx < 0) return null;
             try { return Convert.FromBase64String(src[(commaIdx + 1)..]); }
-            catch { return null; }
+            catch (FormatException)
+            {
+                // Malformed base64 in the data URL — skip the image and render without it.
+                return null;
+            }
         }
 
         // MAUI asset (e.g. "images/1.jpg")
@@ -657,7 +663,12 @@
             await stream.CopyToAsync(ms);
             return ms.ToArray();
         }
-        catch { return null; }
+        catch (Exception ex)
+        {
+            // Asset may not exist (e.g. custom image removed); generate wallpaper without it.
+            System.Diagnostics.Debug.WriteLine($"[WallpaperGenerator] Could not load image '{src}': {ex.Message}");
+            return null;
+        }
     }
 
     public async ValueTask DisposeAsync()

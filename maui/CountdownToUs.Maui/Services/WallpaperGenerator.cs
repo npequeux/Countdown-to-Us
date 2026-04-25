@@ -40,7 +40,11 @@ public static class WallpaperGenerator
                     return;
                 }
             }
-            catch { /* fall through to gradient */ }
+            catch
+            {
+                // Image bytes may be corrupt or an unsupported format; fall through to the
+                // gradient background so wallpaper generation always produces a valid image.
+            }
         }
 
         using var shader = SKShader.CreateLinearGradient(
@@ -49,8 +53,8 @@ public static class WallpaperGenerator
             new[] { new SKColor(10, 61, 92), new SKColor(4, 15, 35) },
             null,
             SKShaderTileMode.Clamp);
-        using var gradPaint = new SKPaint { Shader = shader };
-        canvas.DrawRect(0, 0, Width, Height, gradPaint);
+        using var gradientPaint = new SKPaint { Shader = shader };
+        canvas.DrawRect(0, 0, Width, Height, gradientPaint);
     }
 
     private static void DrawCoverFitBitmap(SKCanvas canvas, SKBitmap bitmap)
