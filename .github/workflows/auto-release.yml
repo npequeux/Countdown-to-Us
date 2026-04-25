@@ -37,13 +37,21 @@ jobs:
 
           EXISTING_TAGS=$(git ls-remote --tags origin | awk '{print $2}' | sed 's|refs/tags/||')
 
-          CANDIDATE="v${MAJOR}.${MINOR}.${PATCH}"
+          # Find the highest patch number across ALL release variants (v*, private-v*,
+          # wallpapers-v*) so this release's version_code is always unique, even when
+          # all three workflows run in parallel on the same commit.
+          MAX_PATCH=$((PATCH - 1))
+          while IFS= read -r tag; do
+            if [[ "$tag" =~ ^(wallpapers-v|private-v|v)${MAJOR}\.${MINOR}\.([0-9]+)$ ]]; then
+              TAG_PATCH="${BASH_REMATCH[2]}"
+              if (( TAG_PATCH > MAX_PATCH )); then
+                MAX_PATCH=${TAG_PATCH}
+              fi
+            fi
+          done <<< "${EXISTING_TAGS}"
+          PATCH=$((MAX_PATCH + 1))
 
-          while echo "${EXISTING_TAGS}" | grep -qx "${CANDIDATE}"; do
-            echo "⏭  Tag ${CANDIDATE} already exists – incrementing patch version."
-            PATCH=$((PATCH + 1))
-            CANDIDATE="v${MAJOR}.${MINOR}.${PATCH}"
-          done
+          CANDIDATE="v${MAJOR}.${MINOR}.${PATCH}"
 
           echo "version=${CANDIDATE}" >> $GITHUB_OUTPUT
           echo "version_name=${MAJOR}.${MINOR}.${PATCH}" >> $GITHUB_OUTPUT
@@ -368,8 +376,12 @@ jobs:
           PATCH=$(echo "${VERSION}" | cut -d. -f3)
 
           CANDIDATE="v${MAJOR}.${MINOR}.${PATCH}"
-          while git rev-parse "${CANDIDATE}" >/dev/null 2>&1; do
-            echo "⏭  Tag ${CANDIDATE} already exists – incrementing patch version."
+          # Also block patch numbers already taken by private-v* or wallpapers-v* tags
+          # so version_codes remain unique across all three parallel release variants.
+          while git rev-parse "${CANDIDATE}" >/dev/null 2>&1 || \
+                git rev-parse "private-v${MAJOR}.${MINOR}.${PATCH}" >/dev/null 2>&1 || \
+                git rev-parse "wallpapers-v${MAJOR}.${MINOR}.${PATCH}" >/dev/null 2>&1; do
+            echo "⏭  Tag ${CANDIDATE} (or a sibling tag) already exists – incrementing patch version."
             PATCH=$((PATCH + 1))
             CANDIDATE="v${MAJOR}.${MINOR}.${PATCH}"
           done
