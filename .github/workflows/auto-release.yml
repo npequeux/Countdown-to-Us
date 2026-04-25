@@ -1,16 +1,21 @@
 name: Auto Release on Merge to Master
 
 # Triggers automatically when a branch is merged (pushed) to master/main.
-# Reads the version from the MAUI project and creates a full release. If that
-# version tag already exists, the patch number is auto-incremented until a
-# free tag is found, ensuring every merge always produces a release.
+# Builds ALL three release variants (standard, private, wallpapers) in parallel
+# and publishes every artifact to a single GitHub Release page.
+#
+# Private variant requires secrets (at least one):
+#   PRIVATE_IMAGE_1_BASE64  ... PRIVATE_IMAGE_10_BASE64
+# Optional Android signing secrets (shared by all variants):
+#   ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD,
+#   ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD
 
 on:
   push:
     branches: [ main ]
 
 jobs:
-  # ── 1. Read version and decide whether a release is needed ──────────────────
+  # -- 1. Read version and decide the release version ---------------------------
   check-version:
     name: Check Version
     runs-on: ubuntu-latest
@@ -20,7 +25,6 @@ jobs:
       version: ${{ steps.version.outputs.version }}
       version_name: ${{ steps.version.outputs.version_name }}
       version_code: ${{ steps.version.outputs.version_code }}
-      is_new: ${{ steps.version.outputs.is_new }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -39,7 +43,7 @@ jobs:
 
           # Find the highest patch number across ALL release variants (v*, private-v*,
           # wallpapers-v*) so this release's version_code is always unique, even when
-          # all three workflows run in parallel on the same commit.
+          # legacy per-variant tags exist from before this merged workflow.
           MAX_PATCH=$((PATCH - 1))
           while IFS= read -r tag; do
             if [[ "$tag" =~ ^(wallpapers-v|private-v|v)${MAJOR}\.${MINOR}\.([0-9]+)$ ]]; then
@@ -57,14 +61,12 @@ jobs:
           echo "version_name=${MAJOR}.${MINOR}.${PATCH}" >> $GITHUB_OUTPUT
           VERSION_CODE=$((MAJOR * 10000 + MINOR * 100 + PATCH))
           echo "version_code=${VERSION_CODE}" >> $GITHUB_OUTPUT
-          echo "is_new=true" >> $GITHUB_OUTPUT
-          echo "🆕 Using version ${CANDIDATE} – starting release pipeline."
+          echo "New version ${CANDIDATE} (version_code=${VERSION_CODE}) – starting release pipeline."
 
-  # ── 2a. Build Blazor WebAssembly ─────────────────────────────────────────────
+  # -- 2a. Build Blazor WebAssembly (standard) ----------------------------------
   build-blazor:
     name: Build Blazor WebAssembly
     needs: check-version
-    if: needs.check-version.outputs.is_new == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -95,11 +97,10 @@ jobs:
           path: countdown-to-us-blazor-${{ needs.check-version.outputs.version }}.zip
           retention-days: 1
 
-  # ── 2b. Build MAUI Android APK ───────────────────────────────────────────────
+  # -- 2b. Build MAUI Android APK (standard) ------------------------------------
   build-android:
     name: Build MAUI Android APK
     needs: check-version
-    if: needs.check-version.outputs.is_new == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -134,11 +135,6 @@ jobs:
           else
             echo "WARNING: ANDROID_KEYSTORE_BASE64 secret is not set."
             echo "Generating a temporary self-signed keystore for this build."
-            echo "Note: APKs signed with a generated keystore cannot be used to"
-            echo "update installations signed with a different keystore."
-            echo "For consistent release signing, configure the ANDROID_KEYSTORE_BASE64,"
-            echo "ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, and ANDROID_KEY_PASSWORD"
-            echo "repository secrets."
             TEMP_PASS=$(openssl rand -base64 24)
             keytool -genkey -v \
               -keystore "${{ github.workspace }}/release-key.jks" \
@@ -182,11 +178,10 @@ jobs:
           path: countdown-to-us-android-${{ needs.check-version.outputs.version }}.apk
           retention-days: 1
 
-  # ── 2c. Build MAUI Windows app ──────────────────────────────────────────────
+  # -- 2c. Build MAUI Windows app (standard) ------------------------------------
   build-windows:
     name: Build MAUI Windows App
     needs: check-version
-    if: needs.check-version.outputs.is_new == 'true'
     runs-on: windows-latest
     permissions:
       contents: read
@@ -247,11 +242,10 @@ jobs:
             countdown-to-us-setup-${{ needs.check-version.outputs.version }}.exe
           retention-days: 1
 
-  # ── 2d. Build Linux package ──────────────────────────────────────────────────
+  # -- 2d. Build Linux package (standard) ---------------------------------------
   build-linux:
     name: Build Linux Package
     needs: check-version
-    if: needs.check-version.outputs.is_new == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -344,17 +338,1101 @@ jobs:
             countdown-to-us-linux-${{ needs.check-version.outputs.version }}.deb
           retention-days: 1
 
-  # ── 3. Create GitHub Release ─────────────────────────────────────────────────
-  create-github-release:
-    name: Create GitHub Release
-    needs: [check-version, build-blazor, build-android, build-windows, build-linux]
-    if: needs.check-version.outputs.is_new == 'true'
+  # -- 3a. Build Private Blazor WebAssembly -------------------------------------
+  build-private-blazor:
+    name: Build Private Blazor WebAssembly
+    needs: check-version
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: read
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Decode and save private images
+        env:
+          IMG1: ${{ secrets.PRIVATE_IMAGE_1_BASE64 }}
+          IMG2: ${{ secrets.PRIVATE_IMAGE_2_BASE64 }}
+          IMG3: ${{ secrets.PRIVATE_IMAGE_3_BASE64 }}
+          IMG4: ${{ secrets.PRIVATE_IMAGE_4_BASE64 }}
+          IMG5: ${{ secrets.PRIVATE_IMAGE_5_BASE64 }}
+          IMG6: ${{ secrets.PRIVATE_IMAGE_6_BASE64 }}
+          IMG7: ${{ secrets.PRIVATE_IMAGE_7_BASE64 }}
+          IMG8: ${{ secrets.PRIVATE_IMAGE_8_BASE64 }}
+          IMG9: ${{ secrets.PRIVATE_IMAGE_9_BASE64 }}
+          IMG10: ${{ secrets.PRIVATE_IMAGE_10_BASE64 }}
+        run: |
+          mkdir -p blazor/CountdownToUs/wwwroot/images
+          saved=0
+          for i in 1 2 3 4 5 6 7 8 9 10; do
+            varname="IMG$i"
+            val="${!varname}"
+            if [ -n "$val" ]; then
+              tmpfile=$(mktemp)
+              printf '%s' "$val" | base64 --decode > "$tmpfile"
+              magic=$(xxd -l 4 -p "$tmpfile")
+              if [[ "$magic" == "89504e47"* ]]; then
+                ext="png"
+              elif [[ "$magic" == "ffd8ff"* ]]; then
+                ext="jpg"
+              else
+                echo "Warning: image $i has unrecognized format (magic: $magic), treating as JPEG"
+                ext="jpg"
+              fi
+              mv "$tmpfile" "blazor/CountdownToUs/wwwroot/images/${i}.${ext}"
+              echo "Saved private image $i as ${i}.${ext}"
+              saved=$((saved+1))
+            fi
+          done
+          if [ "$saved" -eq 0 ]; then
+            echo "No PRIVATE_IMAGE secrets set — using Us.jpg as default"
+            cp Us.jpg blazor/CountdownToUs/wwwroot/images/1.jpg
+          fi
+
+      - name: Patch DefaultImages to use local private images
+        run: |
+          python3 - << 'PYEOF'
+          import re, os
+
+          img_dir = 'blazor/CountdownToUs/wwwroot/images'
+          files = {}
+          for f in os.listdir(img_dir):
+              if f.endswith('.jpg') or f.endswith('.png'):
+                  try:
+                      files[int(f.split('.')[0])] = f
+                  except ValueError:
+                      pass
+
+          entries = [f'        "images/{files[i]}"' for i in sorted(files)]
+          local_images = ',\n'.join(entries)
+          path = 'blazor/CountdownToUs/Pages/Home.razor'
+          with open(path, 'r') as f:
+              content = f.read()
+          pattern = r'(private static readonly string\[\] DefaultImages = new\[\]\s*\n\s*\{).*?(\n\s*\};)'
+          replacement = r'\g<1>\n' + local_images + r'\g<2>'
+          new_content = re.sub(pattern, replacement, content, flags=re.DOTALL)
+          with open(path, 'w') as f:
+              f.write(new_content)
+          print(f"Patched {path} with {len(files)} image(s)")
+          PYEOF
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Restore
+        run: dotnet restore blazor/CountdownToUs/CountdownToUs.csproj
+
+      - name: Publish
+        run: dotnet publish blazor/CountdownToUs/CountdownToUs.csproj --no-restore -c Release -o blazor-publish
+
+      - name: Zip Blazor artifact
+        run: |
+          cd blazor-publish/wwwroot
+          zip -r ../../countdown-to-us-private-blazor-${{ needs.check-version.outputs.version }}.zip .
+
+      - name: Upload Blazor artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: private-blazor-wasm
+          path: countdown-to-us-private-blazor-${{ needs.check-version.outputs.version }}.zip
+          retention-days: 1
+
+  # -- 3b. Build Private MAUI Android APK ---------------------------------------
+  build-private-android:
+    name: Build Private MAUI Android APK
+    needs: check-version
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Decode and save private images
+        env:
+          IMG1: ${{ secrets.PRIVATE_IMAGE_1_BASE64 }}
+          IMG2: ${{ secrets.PRIVATE_IMAGE_2_BASE64 }}
+          IMG3: ${{ secrets.PRIVATE_IMAGE_3_BASE64 }}
+          IMG4: ${{ secrets.PRIVATE_IMAGE_4_BASE64 }}
+          IMG5: ${{ secrets.PRIVATE_IMAGE_5_BASE64 }}
+          IMG6: ${{ secrets.PRIVATE_IMAGE_6_BASE64 }}
+          IMG7: ${{ secrets.PRIVATE_IMAGE_7_BASE64 }}
+          IMG8: ${{ secrets.PRIVATE_IMAGE_8_BASE64 }}
+          IMG9: ${{ secrets.PRIVATE_IMAGE_9_BASE64 }}
+          IMG10: ${{ secrets.PRIVATE_IMAGE_10_BASE64 }}
+        run: |
+          mkdir -p maui/CountdownToUs.Maui/wwwroot/images
+          saved=0
+          for i in 1 2 3 4 5 6 7 8 9 10; do
+            varname="IMG$i"
+            val="${!varname}"
+            if [ -n "$val" ]; then
+              tmpfile=$(mktemp)
+              printf '%s' "$val" | base64 --decode > "$tmpfile"
+              magic=$(xxd -l 4 -p "$tmpfile")
+              if [[ "$magic" == "89504e47"* ]]; then
+                ext="png"
+              elif [[ "$magic" == "ffd8ff"* ]]; then
+                ext="jpg"
+              else
+                echo "Warning: image $i has unrecognized format (magic: $magic), treating as JPEG"
+                ext="jpg"
+              fi
+              mv "$tmpfile" "maui/CountdownToUs.Maui/wwwroot/images/${i}.${ext}"
+              echo "Saved private image $i as ${i}.${ext}"
+              saved=$((saved+1))
+            fi
+          done
+          if [ "$saved" -eq 0 ]; then
+            echo "No PRIVATE_IMAGE secrets set — using Us.jpg as default"
+            cp Us.jpg maui/CountdownToUs.Maui/wwwroot/images/1.jpg
+          fi
+
+      - name: Patch DefaultImages to use local private images
+        run: |
+          python3 - << 'PYEOF'
+          import re, os
+
+          img_dir = 'maui/CountdownToUs.Maui/wwwroot/images'
+          files = {}
+          for f in os.listdir(img_dir):
+              if f.endswith('.jpg') or f.endswith('.png'):
+                  try:
+                      files[int(f.split('.')[0])] = f
+                  except ValueError:
+                      pass
+
+          entries = [f'        "images/{files[i]}"' for i in sorted(files)]
+          local_images = ',\n'.join(entries)
+          path = 'maui/CountdownToUs.Maui/Components/Home.razor'
+          with open(path, 'r') as f:
+              content = f.read()
+          pattern = r'(private static readonly string\[\] DefaultImages = new\[\]\s*\n\s*\{).*?(\n\s*\};)'
+          replacement = r'\g<1>\n' + local_images + r'\g<2>'
+          new_content = re.sub(pattern, replacement, content, flags=re.DOTALL)
+          with open(path, 'w') as f:
+              f.write(new_content)
+          print(f"Patched {path} with {len(files)} image(s)")
+          PYEOF
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Install MAUI workload
+        run: dotnet workload install maui-android
+
+      - name: Restore
+        run: dotnet restore maui/CountdownToUs.Maui/CountdownToUs.Maui.csproj -p:TargetFrameworks=net10.0-android
+
+      - name: Set up Android signing keystore
+        env:
+          SIGNING_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          SIGNING_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          SIGNING_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          SIGNING_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          if [ -n "$SIGNING_KEYSTORE_BASE64" ]; then
+            printf '%s' "$SIGNING_KEYSTORE_BASE64" | base64 --decode \
+              > "${{ github.workspace }}/release-key.jks"
+            echo "KEYSTORE_PASS=$SIGNING_KEYSTORE_PASSWORD" >> "$GITHUB_ENV"
+            echo "KEY_ALIAS=$SIGNING_KEY_ALIAS" >> "$GITHUB_ENV"
+            echo "KEY_PASS=$SIGNING_KEY_PASSWORD" >> "$GITHUB_ENV"
+          else
+            echo "WARNING: ANDROID_KEYSTORE_BASE64 secret is not set."
+            echo "Generating a temporary self-signed keystore for this build."
+            TEMP_PASS=$(openssl rand -base64 24)
+            keytool -genkey -v \
+              -keystore "${{ github.workspace }}/release-key.jks" \
+              -alias "countdown" \
+              -keyalg RSA -keysize 2048 -validity 10000 \
+              -dname "CN=Countdown To Us, OU=Dev, O=Dev, L=Unknown, S=Unknown, C=US" \
+              -storepass "$TEMP_PASS" -keypass "$TEMP_PASS" \
+              -storetype JKS
+            echo "KEYSTORE_PASS=$TEMP_PASS" >> "$GITHUB_ENV"
+            echo "KEY_ALIAS=countdown" >> "$GITHUB_ENV"
+            echo "KEY_PASS=$TEMP_PASS" >> "$GITHUB_ENV"
+          fi
+
+      - name: Build Android APK
+        run: |
+          dotnet publish maui/CountdownToUs.Maui/CountdownToUs.Maui.csproj \
+            -f net10.0-android -c Release --no-restore \
+            -p:AndroidPackageFormats=apk \
+            -p:ApplicationVersion=${{ needs.check-version.outputs.version_code }} \
+            -p:ApplicationDisplayVersion=${{ needs.check-version.outputs.version_name }} \
+            -p:AndroidKeyStore=true \
+            -p:AndroidSigningKeyStore="${{ github.workspace }}/release-key.jks" \
+            -p:AndroidSigningKeyAlias="${{ env.KEY_ALIAS }}" \
+            -p:AndroidSigningKeyPass="${{ env.KEY_PASS }}" \
+            -p:AndroidSigningStorePass="${{ env.KEYSTORE_PASS }}"
+
+      - name: Rename APK
+        run: |
+          APK=$(find maui -name "*-Signed.apk" | head -1)
+          if [ -z "$APK" ]; then
+            echo "No signed APK found. Available APKs:"
+            find maui -name "*.apk"
+            exit 1
+          fi
+          mv "$APK" countdown-to-us-private-android-${{ needs.check-version.outputs.version }}.apk
+
+      - name: Upload Android APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: private-android-apk
+          path: countdown-to-us-private-android-${{ needs.check-version.outputs.version }}.apk
+          retention-days: 1
+
+  # -- 3c. Build Private MAUI Windows App ---------------------------------------
+  build-private-windows:
+    name: Build Private MAUI Windows App
+    needs: check-version
+    runs-on: windows-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Decode and save private images
+        shell: pwsh
+        env:
+          IMG1: ${{ secrets.PRIVATE_IMAGE_1_BASE64 }}
+          IMG2: ${{ secrets.PRIVATE_IMAGE_2_BASE64 }}
+          IMG3: ${{ secrets.PRIVATE_IMAGE_3_BASE64 }}
+          IMG4: ${{ secrets.PRIVATE_IMAGE_4_BASE64 }}
+          IMG5: ${{ secrets.PRIVATE_IMAGE_5_BASE64 }}
+          IMG6: ${{ secrets.PRIVATE_IMAGE_6_BASE64 }}
+          IMG7: ${{ secrets.PRIVATE_IMAGE_7_BASE64 }}
+          IMG8: ${{ secrets.PRIVATE_IMAGE_8_BASE64 }}
+          IMG9: ${{ secrets.PRIVATE_IMAGE_9_BASE64 }}
+          IMG10: ${{ secrets.PRIVATE_IMAGE_10_BASE64 }}
+        run: |
+          New-Item -ItemType Directory -Force -Path "maui/CountdownToUs.Maui/wwwroot/images" | Out-Null
+          $envVars = @{
+            1 = $env:IMG1; 2 = $env:IMG2; 3 = $env:IMG3; 4 = $env:IMG4; 5 = $env:IMG5
+            6 = $env:IMG6; 7 = $env:IMG7; 8 = $env:IMG8; 9 = $env:IMG9; 10 = $env:IMG10
+          }
+          $saved = 0
+          foreach ($i in 1..10) {
+            $val = $envVars[$i]
+            if (-not [string]::IsNullOrEmpty($val)) {
+              $bytes = [Convert]::FromBase64String($val)
+              if ($bytes[0] -eq 0x89 -and $bytes[1] -eq 0x50 -and $bytes[2] -eq 0x4E -and $bytes[3] -eq 0x47) {
+                $ext = "png"
+              } else {
+                $ext = "jpg"
+              }
+              $outPath = "maui/CountdownToUs.Maui/wwwroot/images/${i}.${ext}"
+              [IO.File]::WriteAllBytes($outPath, $bytes)
+              Write-Host "Saved private image $i as ${i}.${ext}"
+              $saved++
+            }
+          }
+          if ($saved -eq 0) {
+            Write-Host "No PRIVATE_IMAGE secrets set — using Us.jpg as default"
+            Copy-Item "Us.jpg" "maui/CountdownToUs.Maui/wwwroot/images/1.jpg"
+          }
+
+      - name: Patch DefaultImages to use local private images
+        shell: pwsh
+        run: |
+          $script = @'
+          import re, os
+
+          img_dir = 'maui/CountdownToUs.Maui/wwwroot/images'
+          files = {}
+          for f in os.listdir(img_dir):
+              if f.endswith('.jpg') or f.endswith('.png'):
+                  try:
+                      files[int(f.split('.')[0])] = f
+                  except ValueError:
+                      pass
+
+          entries = [f'        "images/{files[i]}"' for i in sorted(files)]
+          local_images = ',\n'.join(entries)
+          path = 'maui/CountdownToUs.Maui/Components/Home.razor'
+          with open(path, 'r', encoding='utf-8') as f:
+              content = f.read()
+          pattern = r'(private static readonly string\[\] DefaultImages = new\[\]\s*\n\s*\{).*?(\n\s*\};)'
+          replacement = r'\g<1>\n' + local_images + r'\g<2>'
+          new_content = re.sub(pattern, replacement, content, flags=re.DOTALL)
+          with open(path, 'w', encoding='utf-8') as f:
+              f.write(new_content)
+          print(f"Patched {path} with {len(files)} image(s)")
+          '@
+          $tmp = [System.IO.Path]::GetTempFileName() + ".py"
+          [System.IO.File]::WriteAllText($tmp, $script)
+          python3 $tmp
+          Remove-Item $tmp
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Install MAUI workload
+        run: dotnet workload install maui-windows
+
+      - name: Restore
+        run: dotnet restore maui/CountdownToUs.Maui/CountdownToUs.Maui.csproj -p:TargetFrameworks=net10.0-windows10.0.19041.0 -r win-x64
+
+      - name: Publish Windows app
+        run: |
+          dotnet publish maui/CountdownToUs.Maui/CountdownToUs.Maui.csproj `
+            -f net10.0-windows10.0.19041.0 -c Release --no-restore `
+            -p:WindowsPackageType=None `
+            -p:SelfContained=true `
+            -p:PublishReadyToRun=false `
+            -r win-x64 `
+            -o windows-publish
+
+      - name: Zip Windows artifact
+        shell: pwsh
+        run: |
+          Compress-Archive -Path windows-publish\* -DestinationPath countdown-to-us-private-windows-${{ needs.check-version.outputs.version }}.zip
+
+      - name: Install Inno Setup
+        run: choco install innosetup -y --no-progress
+
+      - name: Build Windows installer
+        shell: cmd
+        run: |
+          "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" ^
+            /DAppVersion=${{ needs.check-version.outputs.version }} ^
+            /DSourceDir=%CD%\windows-publish ^
+            /DOutputDir=%CD%\installer-output ^
+            build\installer.iss
+
+      - name: Rename installer
+        shell: bash
+        run: |
+          mv installer-output/countdown-to-us-setup-${{ needs.check-version.outputs.version }}.exe \
+             countdown-to-us-private-setup-${{ needs.check-version.outputs.version }}.exe
+
+      - name: Upload Windows artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: private-windows-app
+          path: |
+            countdown-to-us-private-windows-${{ needs.check-version.outputs.version }}.zip
+            countdown-to-us-private-setup-${{ needs.check-version.outputs.version }}.exe
+          retention-days: 1
+
+  # -- 3d. Build Private Linux Package ------------------------------------------
+  build-private-linux:
+    name: Build Private Linux Package
+    needs: check-version
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Decode and save private images
+        env:
+          IMG1: ${{ secrets.PRIVATE_IMAGE_1_BASE64 }}
+          IMG2: ${{ secrets.PRIVATE_IMAGE_2_BASE64 }}
+          IMG3: ${{ secrets.PRIVATE_IMAGE_3_BASE64 }}
+          IMG4: ${{ secrets.PRIVATE_IMAGE_4_BASE64 }}
+          IMG5: ${{ secrets.PRIVATE_IMAGE_5_BASE64 }}
+          IMG6: ${{ secrets.PRIVATE_IMAGE_6_BASE64 }}
+          IMG7: ${{ secrets.PRIVATE_IMAGE_7_BASE64 }}
+          IMG8: ${{ secrets.PRIVATE_IMAGE_8_BASE64 }}
+          IMG9: ${{ secrets.PRIVATE_IMAGE_9_BASE64 }}
+          IMG10: ${{ secrets.PRIVATE_IMAGE_10_BASE64 }}
+        run: |
+          mkdir -p blazor/CountdownToUs/wwwroot/images
+          saved=0
+          for i in 1 2 3 4 5 6 7 8 9 10; do
+            varname="IMG$i"
+            val="${!varname}"
+            if [ -n "$val" ]; then
+              tmpfile=$(mktemp)
+              printf '%s' "$val" | base64 --decode > "$tmpfile"
+              magic=$(xxd -l 4 -p "$tmpfile")
+              if [[ "$magic" == "89504e47"* ]]; then
+                ext="png"
+              elif [[ "$magic" == "ffd8ff"* ]]; then
+                ext="jpg"
+              else
+                echo "Warning: image $i has unrecognized format (magic: $magic), treating as JPEG"
+                ext="jpg"
+              fi
+              mv "$tmpfile" "blazor/CountdownToUs/wwwroot/images/${i}.${ext}"
+              echo "Saved private image $i as ${i}.${ext}"
+              saved=$((saved+1))
+            fi
+          done
+          if [ "$saved" -eq 0 ]; then
+            echo "No PRIVATE_IMAGE secrets set — using Us.jpg as default"
+            cp Us.jpg blazor/CountdownToUs/wwwroot/images/1.jpg
+          fi
+
+      - name: Patch DefaultImages to use local private images
+        run: |
+          python3 - << 'PYEOF'
+          import re, os
+
+          img_dir = 'blazor/CountdownToUs/wwwroot/images'
+          files = {}
+          for f in os.listdir(img_dir):
+              if f.endswith('.jpg') or f.endswith('.png'):
+                  try:
+                      files[int(f.split('.')[0])] = f
+                  except ValueError:
+                      pass
+
+          entries = [f'        "images/{files[i]}"' for i in sorted(files)]
+          local_images = ',\n'.join(entries)
+          path = 'blazor/CountdownToUs/Pages/Home.razor'
+          with open(path, 'r') as f:
+              content = f.read()
+          pattern = r'(private static readonly string\[\] DefaultImages = new\[\]\s*\n\s*\{).*?(\n\s*\};)'
+          replacement = r'\g<1>\n' + local_images + r'\g<2>'
+          new_content = re.sub(pattern, replacement, content, flags=re.DOTALL)
+          with open(path, 'w') as f:
+              f.write(new_content)
+          print(f"Patched {path} with {len(files)} image(s)")
+          PYEOF
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Restore Blazor
+        run: dotnet restore blazor/CountdownToUs/CountdownToUs.csproj
+
+      - name: Publish Blazor WebAssembly
+        run: dotnet publish blazor/CountdownToUs/CountdownToUs.csproj --no-restore -c Release -o blazor-publish
+
+      - name: Restore Linux host
+        run: dotnet restore linux-host/CountdownToUs.Linux/CountdownToUs.Linux.csproj -r linux-x64
+
+      - name: Publish Linux host
+        run: |
+          dotnet publish linux-host/CountdownToUs.Linux/CountdownToUs.Linux.csproj \
+            --no-restore -c Release \
+            -r linux-x64 --self-contained true \
+            -p:PublishSingleFile=true \
+            -o linux-publish
+
+      - name: Copy Blazor files into Linux package
+        run: cp -r blazor-publish/wwwroot linux-publish/
+
+      - name: Create tar.gz
+        run: |
+          cd linux-publish
+          tar -czf ../countdown-to-us-private-linux-${{ needs.check-version.outputs.version }}.tar.gz .
+
+      - name: Create .deb package
+        run: |
+          VERSION=${{ needs.check-version.outputs.version }}
+          DEB_VERSION="${VERSION#v}"
+          DEB_DIR="deb-pkg"
+
+          mkdir -p "$DEB_DIR/DEBIAN"
+          mkdir -p "$DEB_DIR/usr/lib/countdown-to-us"
+          mkdir -p "$DEB_DIR/usr/bin"
+          mkdir -p "$DEB_DIR/usr/share/applications"
+          mkdir -p "$DEB_DIR/usr/share/icons/hicolor/256x256/apps"
+
+          cp -r linux-publish/* "$DEB_DIR/usr/lib/countdown-to-us/"
+
+          cat > "$DEB_DIR/usr/bin/countdown-to-us" << 'EOF'
+          #!/bin/bash
+          exec /usr/lib/countdown-to-us/CountdownToUs "$@"
+          EOF
+          chmod +x "$DEB_DIR/usr/bin/countdown-to-us"
+
+          cat > "$DEB_DIR/usr/share/applications/countdown-to-us.desktop" << 'EOF'
+          [Desktop Entry]
+          Version=1.0
+          Type=Application
+          Name=Countdown to Us
+          Comment=Beautiful countdown timer to October 1, 2028
+          Exec=countdown-to-us
+          Icon=countdown-to-us
+          Terminal=false
+          Categories=Utility;
+          EOF
+
+          cp build/icon.png "$DEB_DIR/usr/share/icons/hicolor/256x256/apps/countdown-to-us.png"
+
+          cat > "$DEB_DIR/DEBIAN/control" << EOF
+          Package: countdown-to-us
+          Version: $DEB_VERSION
+          Architecture: amd64
+          Maintainer: Countdown to Us <https://github.com/npequeux/Countdown-to-Us>
+          Description: Beautiful countdown timer (private build)
+           A countdown timer displaying the time remaining until October 1, 2028.
+           Built with .NET 10 (Blazor WebAssembly + ASP.NET Core).
+          EOF
+
+          dpkg-deb --build "$DEB_DIR" countdown-to-us-private-linux-${{ needs.check-version.outputs.version }}.deb
+
+      - name: Upload Linux artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: private-linux-app
+          path: |
+            countdown-to-us-private-linux-${{ needs.check-version.outputs.version }}.tar.gz
+            countdown-to-us-private-linux-${{ needs.check-version.outputs.version }}.deb
+          retention-days: 1
+
+  # -- 4a. Build Wallpapers Blazor WebAssembly ----------------------------------
+  build-wallpapers-blazor:
+    name: Build Wallpapers Blazor WebAssembly
+    needs: check-version
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download paradise island wallpapers
+        run: |
+          mkdir -p blazor/CountdownToUs/wwwroot/images
+          declare -A PHOTOS=(
+            [1]="photo-1506744038136-46273834b3fb"
+            [2]="photo-1507525428034-b723cf961d3e"
+            [3]="photo-1465101099481-8da6ee8aa37b"
+            [4]="photo-1519046904884-53103b34b206"
+            [5]="photo-1499793983690-e29da59ef1c2"
+            [6]="photo-1471922694854-ff1b63b20054"
+            [7]="photo-1468413253725-0d5181091126"
+            [8]="photo-1559494007-9f5847c49d94"
+            [9]="photo-1548574505-5e239809ee19"
+            [10]="photo-1566438480900-0609be27a4be"
+          )
+          for n in $(seq 1 10); do
+            ID="${PHOTOS[$n]}"
+            URL="https://images.unsplash.com/${ID}?auto=format&fit=crop&w=1920&q=80"
+            echo "Downloading wallpaper $n: $URL"
+            if curl -fL --max-time 60 -s "$URL" -o "blazor/CountdownToUs/wwwroot/images/${n}.jpg"; then
+              echo "  Saved images/${n}.jpg ($(du -h blazor/CountdownToUs/wwwroot/images/${n}.jpg | cut -f1))"
+            else
+              echo "  Warning: Failed to download image $n (HTTP error or timeout), skipping"
+              rm -f "blazor/CountdownToUs/wwwroot/images/${n}.jpg"
+            fi
+          done
+          count=$(find blazor/CountdownToUs/wwwroot/images -name '*.jpg' | wc -l)
+          if [ "$count" -eq 0 ]; then
+            echo "Error: No wallpaper images could be downloaded"
+            exit 1
+          fi
+          echo "Downloaded $count wallpaper image(s)"
+
+      - name: Patch DefaultImages to use local wallpaper images
+        run: |
+          python3 - << 'PYEOF'
+          import re, os
+
+          img_dir = 'blazor/CountdownToUs/wwwroot/images'
+          files = {}
+          for f in os.listdir(img_dir):
+              if f.endswith('.jpg') or f.endswith('.png'):
+                  try:
+                      files[int(f.split('.')[0])] = f
+                  except ValueError:
+                      pass
+          entries = [f'        "images/{files[i]}"' for i in sorted(files)]
+          local_images = ',\n'.join(entries)
+          path = 'blazor/CountdownToUs/Pages/Home.razor'
+          with open(path, 'r') as f:
+              content = f.read()
+          pattern = r'(private static readonly string\[\] DefaultImages = new\[\]\s*\n\s*\{).*?(\n\s*\};)'
+          replacement = r'\g<1>\n' + local_images + r'\g<2>'
+          new_content = re.sub(pattern, replacement, content, flags=re.DOTALL)
+          with open(path, 'w') as f:
+              f.write(new_content)
+          print(f"Patched {path} with {len(files)} wallpaper image(s)")
+          PYEOF
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Restore
+        run: dotnet restore blazor/CountdownToUs/CountdownToUs.csproj
+
+      - name: Publish
+        run: dotnet publish blazor/CountdownToUs/CountdownToUs.csproj --no-restore -c Release -o blazor-publish
+
+      - name: Zip Blazor artifact
+        run: |
+          cd blazor-publish/wwwroot
+          zip -r ../../countdown-to-us-wallpapers-blazor-${{ needs.check-version.outputs.version }}.zip .
+
+      - name: Upload Blazor artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: wallpapers-blazor-wasm
+          path: countdown-to-us-wallpapers-blazor-${{ needs.check-version.outputs.version }}.zip
+          retention-days: 1
+
+  # -- 4b. Build Wallpapers MAUI Android APK ------------------------------------
+  build-wallpapers-android:
+    name: Build Wallpapers MAUI Android APK
+    needs: check-version
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download paradise island wallpapers
+        run: |
+          mkdir -p maui/CountdownToUs.Maui/wwwroot/images
+          declare -A PHOTOS=(
+            [1]="photo-1506744038136-46273834b3fb"
+            [2]="photo-1507525428034-b723cf961d3e"
+            [3]="photo-1465101099481-8da6ee8aa37b"
+            [4]="photo-1519046904884-53103b34b206"
+            [5]="photo-1499793983690-e29da59ef1c2"
+            [6]="photo-1471922694854-ff1b63b20054"
+            [7]="photo-1468413253725-0d5181091126"
+            [8]="photo-1559494007-9f5847c49d94"
+            [9]="photo-1548574505-5e239809ee19"
+            [10]="photo-1566438480900-0609be27a4be"
+          )
+          for n in $(seq 1 10); do
+            ID="${PHOTOS[$n]}"
+            URL="https://images.unsplash.com/${ID}?auto=format&fit=crop&w=1920&q=80"
+            echo "Downloading wallpaper $n: $URL"
+            if curl -fL --max-time 60 -s "$URL" -o "maui/CountdownToUs.Maui/wwwroot/images/${n}.jpg"; then
+              echo "  Saved images/${n}.jpg ($(du -h maui/CountdownToUs.Maui/wwwroot/images/${n}.jpg | cut -f1))"
+            else
+              echo "  Warning: Failed to download image $n (HTTP error or timeout), skipping"
+              rm -f "maui/CountdownToUs.Maui/wwwroot/images/${n}.jpg"
+            fi
+          done
+          count=$(find maui/CountdownToUs.Maui/wwwroot/images -name '*.jpg' | wc -l)
+          if [ "$count" -eq 0 ]; then
+            echo "Error: No wallpaper images could be downloaded"
+            exit 1
+          fi
+          echo "Downloaded $count wallpaper image(s)"
+
+      - name: Patch DefaultImages to use local wallpaper images
+        run: |
+          python3 - << 'PYEOF'
+          import re, os
+
+          img_dir = 'maui/CountdownToUs.Maui/wwwroot/images'
+          files = {}
+          for f in os.listdir(img_dir):
+              if f.endswith('.jpg') or f.endswith('.png'):
+                  try:
+                      files[int(f.split('.')[0])] = f
+                  except ValueError:
+                      pass
+          entries = [f'        "images/{files[i]}"' for i in sorted(files)]
+          local_images = ',\n'.join(entries)
+          path = 'maui/CountdownToUs.Maui/Components/Home.razor'
+          with open(path, 'r') as f:
+              content = f.read()
+          pattern = r'(private static readonly string\[\] DefaultImages = new\[\]\s*\n\s*\{).*?(\n\s*\};)'
+          replacement = r'\g<1>\n' + local_images + r'\g<2>'
+          new_content = re.sub(pattern, replacement, content, flags=re.DOTALL)
+          with open(path, 'w') as f:
+              f.write(new_content)
+          print(f"Patched {path} with {len(files)} wallpaper image(s)")
+          PYEOF
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Install MAUI workload
+        run: dotnet workload install maui-android
+
+      - name: Restore
+        run: dotnet restore maui/CountdownToUs.Maui/CountdownToUs.Maui.csproj -p:TargetFrameworks=net10.0-android
+
+      - name: Set up Android signing keystore
+        env:
+          SIGNING_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          SIGNING_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          SIGNING_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          SIGNING_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          if [ -n "$SIGNING_KEYSTORE_BASE64" ]; then
+            printf '%s' "$SIGNING_KEYSTORE_BASE64" | base64 --decode \
+              > "${{ github.workspace }}/release-key.jks"
+            echo "KEYSTORE_PASS=$SIGNING_KEYSTORE_PASSWORD" >> "$GITHUB_ENV"
+            echo "KEY_ALIAS=$SIGNING_KEY_ALIAS" >> "$GITHUB_ENV"
+            echo "KEY_PASS=$SIGNING_KEY_PASSWORD" >> "$GITHUB_ENV"
+          else
+            echo "WARNING: ANDROID_KEYSTORE_BASE64 secret is not set."
+            echo "Generating a temporary self-signed keystore for this build."
+            TEMP_PASS=$(openssl rand -base64 24)
+            keytool -genkey -v \
+              -keystore "${{ github.workspace }}/release-key.jks" \
+              -alias "countdown" \
+              -keyalg RSA -keysize 2048 -validity 10000 \
+              -dname "CN=Countdown To Us, OU=Dev, O=Dev, L=Unknown, S=Unknown, C=US" \
+              -storepass "$TEMP_PASS" -keypass "$TEMP_PASS" \
+              -storetype JKS
+            echo "KEYSTORE_PASS=$TEMP_PASS" >> "$GITHUB_ENV"
+            echo "KEY_ALIAS=countdown" >> "$GITHUB_ENV"
+            echo "KEY_PASS=$TEMP_PASS" >> "$GITHUB_ENV"
+          fi
+
+      - name: Build Android APK
+        run: |
+          dotnet publish maui/CountdownToUs.Maui/CountdownToUs.Maui.csproj \
+            -f net10.0-android -c Release --no-restore \
+            -p:AndroidPackageFormats=apk \
+            -p:ApplicationVersion=${{ needs.check-version.outputs.version_code }} \
+            -p:ApplicationDisplayVersion=${{ needs.check-version.outputs.version_name }} \
+            -p:AndroidKeyStore=true \
+            -p:AndroidSigningKeyStore="${{ github.workspace }}/release-key.jks" \
+            -p:AndroidSigningKeyAlias="${{ env.KEY_ALIAS }}" \
+            -p:AndroidSigningKeyPass="${{ env.KEY_PASS }}" \
+            -p:AndroidSigningStorePass="${{ env.KEYSTORE_PASS }}"
+
+      - name: Rename APK
+        run: |
+          APK=$(find maui -name "*-Signed.apk" | head -1)
+          if [ -z "$APK" ]; then
+            echo "No signed APK found. Available APKs:"
+            find maui -name "*.apk"
+            exit 1
+          fi
+          mv "$APK" countdown-to-us-wallpapers-android-${{ needs.check-version.outputs.version }}.apk
+
+      - name: Upload Android APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: wallpapers-android-apk
+          path: countdown-to-us-wallpapers-android-${{ needs.check-version.outputs.version }}.apk
+          retention-days: 1
+
+  # -- 4c. Build Wallpapers MAUI Windows App ------------------------------------
+  build-wallpapers-windows:
+    name: Build Wallpapers MAUI Windows App
+    needs: check-version
+    runs-on: windows-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download paradise island wallpapers
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path "maui/CountdownToUs.Maui/wwwroot/images" | Out-Null
+          $photos = @{
+            1  = "photo-1506744038136-46273834b3fb"
+            2  = "photo-1507525428034-b723cf961d3e"
+            3  = "photo-1465101099481-8da6ee8aa37b"
+            4  = "photo-1519046904884-53103b34b206"
+            5  = "photo-1499793983690-e29da59ef1c2"
+            6  = "photo-1471922694854-ff1b63b20054"
+            7  = "photo-1468413253725-0d5181091126"
+            8  = "photo-1559494007-9f5847c49d94"
+            9  = "photo-1548574505-5e239809ee19"
+            10 = "photo-1566438480900-0609be27a4be"
+          }
+          $downloaded = 0
+          foreach ($n in 1..10) {
+            $id  = $photos[$n]
+            $url = "https://images.unsplash.com/${id}?auto=format&fit=crop&w=1920&q=80"
+            $out = "maui/CountdownToUs.Maui/wwwroot/images/${n}.jpg"
+            Write-Host "Downloading wallpaper ${n}: $url"
+            try {
+              Invoke-WebRequest -Uri $url -OutFile $out -TimeoutSec 60
+              Write-Host "  Saved images/${n}.jpg"
+              $downloaded++
+            } catch {
+              Write-Warning "  Failed to download image ${n}: $($_.Exception.Message)"
+              if (Test-Path $out) { Remove-Item $out }
+            }
+          }
+          if ($downloaded -eq 0) {
+            Write-Error "No wallpaper images could be downloaded"
+            exit 1
+          }
+          Write-Host "Downloaded $downloaded wallpaper image(s)"
+
+      - name: Patch DefaultImages to use local wallpaper images
+        shell: pwsh
+        run: |
+          $script = @'
+          import re, os
+
+          img_dir = 'maui/CountdownToUs.Maui/wwwroot/images'
+          files = {}
+          for f in os.listdir(img_dir):
+              if f.endswith('.jpg') or f.endswith('.png'):
+                  try:
+                      files[int(f.split('.')[0])] = f
+                  except ValueError:
+                      pass
+          entries = [f'        "images/{files[i]}"' for i in sorted(files)]
+          local_images = ',\n'.join(entries)
+          path = 'maui/CountdownToUs.Maui/Components/Home.razor'
+          with open(path, 'r', encoding='utf-8') as f:
+              content = f.read()
+          pattern = r'(private static readonly string\[\] DefaultImages = new\[\]\s*\n\s*\{).*?(\n\s*\};)'
+          replacement = r'\g<1>\n' + local_images + r'\g<2>'
+          new_content = re.sub(pattern, replacement, content, flags=re.DOTALL)
+          with open(path, 'w', encoding='utf-8') as f:
+              f.write(new_content)
+          print(f"Patched {path} with {len(files)} wallpaper image(s)")
+          '@
+          $tmp = [System.IO.Path]::GetTempFileName() + ".py"
+          [System.IO.File]::WriteAllText($tmp, $script)
+          python3 $tmp
+          Remove-Item $tmp
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Install MAUI workload
+        run: dotnet workload install maui-windows
+
+      - name: Restore
+        run: dotnet restore maui/CountdownToUs.Maui/CountdownToUs.Maui.csproj -p:TargetFrameworks=net10.0-windows10.0.19041.0 -r win-x64
+
+      - name: Publish Windows app
+        run: |
+          dotnet publish maui/CountdownToUs.Maui/CountdownToUs.Maui.csproj `
+            -f net10.0-windows10.0.19041.0 -c Release --no-restore `
+            -p:WindowsPackageType=None `
+            -p:SelfContained=true `
+            -p:PublishReadyToRun=false `
+            -r win-x64 `
+            -o windows-publish
+
+      - name: Zip Windows artifact
+        shell: pwsh
+        run: |
+          Compress-Archive -Path windows-publish\* -DestinationPath countdown-to-us-wallpapers-windows-${{ needs.check-version.outputs.version }}.zip
+
+      - name: Install Inno Setup
+        run: choco install innosetup -y --no-progress
+
+      - name: Build Windows installer
+        shell: cmd
+        run: |
+          "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" ^
+            /DAppVersion=${{ needs.check-version.outputs.version }} ^
+            /DSourceDir=%CD%\windows-publish ^
+            /DOutputDir=%CD%\installer-output ^
+            build\installer.iss
+
+      - name: Rename installer
+        shell: bash
+        run: |
+          mv installer-output/countdown-to-us-setup-${{ needs.check-version.outputs.version }}.exe \
+             countdown-to-us-wallpapers-setup-${{ needs.check-version.outputs.version }}.exe
+
+      - name: Upload Windows artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: wallpapers-windows-app
+          path: |
+            countdown-to-us-wallpapers-windows-${{ needs.check-version.outputs.version }}.zip
+            countdown-to-us-wallpapers-setup-${{ needs.check-version.outputs.version }}.exe
+          retention-days: 1
+
+  # -- 4d. Build Wallpapers Linux Package ---------------------------------------
+  build-wallpapers-linux:
+    name: Build Wallpapers Linux Package
+    needs: check-version
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download paradise island wallpapers
+        run: |
+          mkdir -p blazor/CountdownToUs/wwwroot/images
+          declare -A PHOTOS=(
+            [1]="photo-1506744038136-46273834b3fb"
+            [2]="photo-1507525428034-b723cf961d3e"
+            [3]="photo-1465101099481-8da6ee8aa37b"
+            [4]="photo-1519046904884-53103b34b206"
+            [5]="photo-1499793983690-e29da59ef1c2"
+            [6]="photo-1471922694854-ff1b63b20054"
+            [7]="photo-1468413253725-0d5181091126"
+            [8]="photo-1559494007-9f5847c49d94"
+            [9]="photo-1548574505-5e239809ee19"
+            [10]="photo-1566438480900-0609be27a4be"
+          )
+          for n in $(seq 1 10); do
+            ID="${PHOTOS[$n]}"
+            URL="https://images.unsplash.com/${ID}?auto=format&fit=crop&w=1920&q=80"
+            echo "Downloading wallpaper $n: $URL"
+            if curl -fL --max-time 60 -s "$URL" -o "blazor/CountdownToUs/wwwroot/images/${n}.jpg"; then
+              echo "  Saved images/${n}.jpg ($(du -h blazor/CountdownToUs/wwwroot/images/${n}.jpg | cut -f1))"
+            else
+              echo "  Warning: Failed to download image $n (HTTP error or timeout), skipping"
+              rm -f "blazor/CountdownToUs/wwwroot/images/${n}.jpg"
+            fi
+          done
+          count=$(find blazor/CountdownToUs/wwwroot/images -name '*.jpg' | wc -l)
+          if [ "$count" -eq 0 ]; then
+            echo "Error: No wallpaper images could be downloaded"
+            exit 1
+          fi
+          echo "Downloaded $count wallpaper image(s)"
+
+      - name: Patch DefaultImages to use local wallpaper images
+        run: |
+          python3 - << 'PYEOF'
+          import re, os
+
+          img_dir = 'blazor/CountdownToUs/wwwroot/images'
+          files = {}
+          for f in os.listdir(img_dir):
+              if f.endswith('.jpg') or f.endswith('.png'):
+                  try:
+                      files[int(f.split('.')[0])] = f
+                  except ValueError:
+                      pass
+          entries = [f'        "images/{files[i]}"' for i in sorted(files)]
+          local_images = ',\n'.join(entries)
+          path = 'blazor/CountdownToUs/Pages/Home.razor'
+          with open(path, 'r') as f:
+              content = f.read()
+          pattern = r'(private static readonly string\[\] DefaultImages = new\[\]\s*\n\s*\{).*?(\n\s*\};)'
+          replacement = r'\g<1>\n' + local_images + r'\g<2>'
+          new_content = re.sub(pattern, replacement, content, flags=re.DOTALL)
+          with open(path, 'w') as f:
+              f.write(new_content)
+          print(f"Patched {path} with {len(files)} wallpaper image(s)")
+          PYEOF
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Restore Blazor
+        run: dotnet restore blazor/CountdownToUs/CountdownToUs.csproj
+
+      - name: Publish Blazor WebAssembly
+        run: dotnet publish blazor/CountdownToUs/CountdownToUs.csproj --no-restore -c Release -o blazor-publish
+
+      - name: Restore Linux host
+        run: dotnet restore linux-host/CountdownToUs.Linux/CountdownToUs.Linux.csproj -r linux-x64
+
+      - name: Publish Linux host
+        run: |
+          dotnet publish linux-host/CountdownToUs.Linux/CountdownToUs.Linux.csproj \
+            --no-restore -c Release \
+            -r linux-x64 --self-contained true \
+            -p:PublishSingleFile=true \
+            -o linux-publish
+
+      - name: Copy Blazor files into Linux package
+        run: cp -r blazor-publish/wwwroot linux-publish/
+
+      - name: Create tar.gz
+        run: |
+          cd linux-publish
+          tar -czf ../countdown-to-us-wallpapers-linux-${{ needs.check-version.outputs.version }}.tar.gz .
+
+      - name: Create .deb package
+        run: |
+          VERSION=${{ needs.check-version.outputs.version }}
+          DEB_VERSION="${VERSION#v}"
+          DEB_DIR="deb-pkg"
+
+          mkdir -p "$DEB_DIR/DEBIAN"
+          mkdir -p "$DEB_DIR/usr/lib/countdown-to-us"
+          mkdir -p "$DEB_DIR/usr/bin"
+          mkdir -p "$DEB_DIR/usr/share/applications"
+          mkdir -p "$DEB_DIR/usr/share/icons/hicolor/256x256/apps"
+
+          cp -r linux-publish/* "$DEB_DIR/usr/lib/countdown-to-us/"
+
+          cat > "$DEB_DIR/usr/bin/countdown-to-us" << 'EOF'
+          #!/bin/bash
+          exec /usr/lib/countdown-to-us/CountdownToUs "$@"
+          EOF
+          chmod +x "$DEB_DIR/usr/bin/countdown-to-us"
+
+          cat > "$DEB_DIR/usr/share/applications/countdown-to-us.desktop" << 'EOF'
+          [Desktop Entry]
+          Version=1.0
+          Type=Application
+          Name=Countdown to Us
+          Comment=Beautiful countdown timer to October 1, 2028
+          Exec=countdown-to-us
+          Icon=countdown-to-us
+          Terminal=false
+          Categories=Utility;
+          EOF
+
+          cp build/icon.png "$DEB_DIR/usr/share/icons/hicolor/256x256/apps/countdown-to-us.png"
+
+          cat > "$DEB_DIR/DEBIAN/control" << EOF
+          Package: countdown-to-us
+          Version: $DEB_VERSION
+          Architecture: amd64
+          Maintainer: Countdown to Us <https://github.com/npequeux/Countdown-to-Us>
+          Description: Beautiful countdown timer (wallpapers build)
+           A countdown timer displaying the time remaining until October 1, 2028.
+           Built with .NET 10 (Blazor WebAssembly + ASP.NET Core).
+           Includes paradise island wallpaper photos.
+          EOF
+
+          dpkg-deb --build "$DEB_DIR" countdown-to-us-wallpapers-linux-${{ needs.check-version.outputs.version }}.deb
+
+      - name: Upload Linux artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: wallpapers-linux-app
+          path: |
+            countdown-to-us-wallpapers-linux-${{ needs.check-version.outputs.version }}.tar.gz
+            countdown-to-us-wallpapers-linux-${{ needs.check-version.outputs.version }}.deb
+          retention-days: 1
+
+  # -- 5. Create unified GitHub Release (all variants) --------------------------
+  create-github-release:
+    name: Create GitHub Release
+    needs:
+      - check-version
+      - build-blazor
+      - build-android
+      - build-windows
+      - build-linux
+      - build-private-blazor
+      - build-private-android
+      - build-private-windows
+      - build-private-linux
+      - build-wallpapers-blazor
+      - build-wallpapers-android
+      - build-wallpapers-windows
+      - build-wallpapers-linux
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Download all release artifacts
         uses: actions/download-artifact@v4
@@ -376,12 +1454,12 @@ jobs:
           PATCH=$(echo "${VERSION}" | cut -d. -f3)
 
           CANDIDATE="v${MAJOR}.${MINOR}.${PATCH}"
-          # Also block patch numbers already taken by private-v* or wallpapers-v* tags
-          # so version_codes remain unique across all three parallel release variants.
+          # Also check legacy private-v* and wallpapers-v* tags to avoid
+          # version_code collisions with APKs installed from older releases.
           while git rev-parse "${CANDIDATE}" >/dev/null 2>&1 || \
                 git rev-parse "private-v${MAJOR}.${MINOR}.${PATCH}" >/dev/null 2>&1 || \
                 git rev-parse "wallpapers-v${MAJOR}.${MINOR}.${PATCH}" >/dev/null 2>&1; do
-            echo "⏭  Tag ${CANDIDATE} (or a sibling tag) already exists – incrementing patch version."
+            echo "Tag ${CANDIDATE} (or a sibling tag) already exists – incrementing patch version."
             PATCH=$((PATCH + 1))
             CANDIDATE="v${MAJOR}.${MINOR}.${PATCH}"
           done
@@ -389,7 +1467,7 @@ jobs:
           echo "version=${CANDIDATE}" >> $GITHUB_OUTPUT
 
           if [ "${CANDIDATE}" != "${ORIGINAL}" ]; then
-            echo "⚠️  Version bumped from ${ORIGINAL} to ${CANDIDATE} due to concurrent release."
+            echo "Version bumped from ${ORIGINAL} to ${CANDIDATE} due to concurrent release."
             while IFS= read -r -d '' f; do
               dir=$(dirname "$f")
               base=$(basename "$f")
@@ -418,6 +1496,7 @@ jobs:
 
             ### Downloads
 
+            #### Standard edition
             | Platform | File | Notes |
             |---|---|---|
             | 🌐 Web | `countdown-to-us-blazor-*.zip` | Blazor WebAssembly – extract and serve as a static site |
@@ -427,13 +1506,33 @@ jobs:
             | 🐧 Linux (tar.gz) | `countdown-to-us-linux-*.tar.gz` | Self-contained Linux app (x64) |
             | 🐧 Linux (.deb) | `countdown-to-us-linux-*.deb` | Debian/Ubuntu package (x64) |
 
+            #### Private edition (personal photos from secrets)
+            | Platform | File | Notes |
+            |---|---|---|
+            | 🌐 Web | `countdown-to-us-private-blazor-*.zip` | Blazor WebAssembly with personal photos |
+            | 🤖 Android | `countdown-to-us-private-android-*.apk` | Android APK with personal photos |
+            | 🪟 Windows (installer) | `countdown-to-us-private-setup-*.exe` | Windows installer with personal photos |
+            | 🪟 Windows (portable) | `countdown-to-us-private-windows-*.zip` | Windows app with personal photos |
+            | 🐧 Linux (tar.gz) | `countdown-to-us-private-linux-*.tar.gz` | Linux app with personal photos |
+            | 🐧 Linux (.deb) | `countdown-to-us-private-linux-*.deb` | Debian/Ubuntu package with personal photos |
+
+            #### Wallpapers edition (paradise island photos)
+            | Platform | File | Notes |
+            |---|---|---|
+            | 🌐 Web | `countdown-to-us-wallpapers-blazor-*.zip` | Blazor WebAssembly with paradise wallpapers |
+            | 🤖 Android | `countdown-to-us-wallpapers-android-*.apk` | Android APK with paradise wallpapers |
+            | 🪟 Windows (installer) | `countdown-to-us-wallpapers-setup-*.exe` | Windows installer with paradise wallpapers |
+            | 🪟 Windows (portable) | `countdown-to-us-wallpapers-windows-*.zip` | Windows app with paradise wallpapers |
+            | 🐧 Linux (tar.gz) | `countdown-to-us-wallpapers-linux-*.tar.gz` | Linux app with paradise wallpapers |
+            | 🐧 Linux (.deb) | `countdown-to-us-wallpapers-linux-*.deb` | Debian/Ubuntu package with paradise wallpapers |
+
             ### Installation
 
             **Web**: Extract the zip and deploy to any static web host (GitHub Pages, Netlify, etc.).
 
             **Android**: Enable *Install unknown apps* in Settings, then open the APK file.
 
-            **Windows (installer)**: Run `countdown-to-us-setup-*.exe` and follow the wizard.
+            **Windows (installer)**: Run the `.exe` installer and follow the wizard.
 
             **Windows (portable)**: Extract the zip and run `CountdownToUs.Maui.exe`.
 
@@ -444,6 +1543,7 @@ jobs:
             ### Notes
             - Built with .NET 10 (Blazor WebAssembly + .NET MAUI + ASP.NET Core)
             - Target date: October 1, 2028
+            - Wallpaper photos sourced from [Unsplash](https://unsplash.com)
           files: release-assets/**/*
           draft: false
           prerelease: false
