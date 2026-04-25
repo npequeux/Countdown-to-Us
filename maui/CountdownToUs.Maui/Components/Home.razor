@@ -3,6 +3,7 @@
 @using System.Linq
 @implements IAsyncDisposable
 @inject IJSRuntime JS
+@inject CountdownToUs.Maui.Services.IWallpaperService WallpaperService
 
 <PageTitle>Countdown to Us</PageTitle>
 
@@ -104,6 +105,23 @@
                     <InputFile id="photo-upload" accept="image/*" multiple OnChange="HandlePhotoUpload" />
                     <button class="btn btn-danger" @onclick="ClearPhotos">@T("clearPhotos")</button>
                 </div>
+                @if (WallpaperService.IsSupported)
+                {
+                    <div class="settings-group">
+                        <label>@T("wallpaperLabel")</label>
+                        <button class="btn" @onclick="SetWallpaperNow" disabled="@_wallpaperBusy">
+                            @(_wallpaperBusy ? "…" : T("setWallpaper"))
+                        </button>
+                        <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;font-weight:normal;">
+                            <input type="checkbox" @bind="_autoWallpaper" @bind:after="OnAutoWallpaperChanged" />
+                            @T("autoWallpaper")
+                        </label>
+                        @if (!string.IsNullOrEmpty(_wallpaperStatus))
+                        {
+                            <span style="font-size:0.82rem;opacity:0.75;">@_wallpaperStatus</span>
+                        }
+                    </div>
+                }
             </div>
         }
     </div>
@@ -147,6 +165,11 @@
             ["prevImage"] = "Previous image",
             ["nextImage"] = "Next image",
             ["currentTime"] = "Current time",
+            ["wallpaperLabel"] = "Desktop Wallpaper",
+            ["setWallpaper"] = "Set as Wallpaper",
+            ["autoWallpaper"] = "Auto-update wallpaper (every minute)",
+            ["wallpaperSet"] = "✓ Wallpaper updated",
+            ["wallpaperError"] = "Failed to set wallpaper",
             ["locale"] = "en-US"
         },
         ["fr"] = new()
@@ -167,6 +190,11 @@
             ["prevImage"] = "Image précédente",
             ["nextImage"] = "Image suivante",
             ["currentTime"] = "Heure actuelle",
+            ["wallpaperLabel"] = "Fond d'écran",
+            ["setWallpaper"] = "Définir comme fond d'écran",
+            ["autoWallpaper"] = "Mise à jour auto du fond d'écran (chaque minute)",
+            ["wallpaperSet"] = "✓ Fond d'écran mis à jour",
+            ["wallpaperError"] = "Impossible de définir le fond d'écran",
             ["locale"] = "fr-FR"
         },
         ["es"] = new()
@@ -187,6 +215,11 @@
             ["prevImage"] = "Imagen anterior",
             ["nextImage"] = "Imagen siguiente",
             ["currentTime"] = "Hora actual",
+            ["wallpaperLabel"] = "Fondo de escritorio",
+            ["setWallpaper"] = "Establecer como fondo",
+            ["autoWallpaper"] = "Actualizar fondo automáticamente (cada minuto)",
+            ["wallpaperSet"] = "✓ Fondo actualizado",
+            ["wallpaperError"] = "No se pudo establecer el fondo",
             ["locale"] = "es-ES"
         },
         ["zh"] = new()
@@ -207,6 +240,11 @@
             ["prevImage"] = "上一张",
             ["nextImage"] = "下一张",
             ["currentTime"] = "当前时间",
+            ["wallpaperLabel"] = "桌面壁纸",
+            ["setWallpaper"] = "设置为壁纸",
+            ["autoWallpaper"] = "自动更新壁纸（每分钟）",
+            ["wallpaperSet"] = "✓ 壁纸已更新",
+            ["wallpaperError"] = "设置壁纸失败",
             ["locale"] = "zh-CN"
         }
     };
@@ -273,6 +311,12 @@
     private bool SettingsPanelOpen { get; set; }
     private DateTime TargetDateInputValue { get; set; }
 
+    // Wallpaper
+    private bool _autoWallpaper;
+    private bool _wallpaperBusy;
+    private string _wallpaperStatus = string.Empty;
+    private Timer? _wallpaperTimer;
+
     protected override async Task OnInitializedAsync()
     {
         // Load persisted language
@@ -300,6 +344,17 @@
         }
 
         UpdateCountdown();
+
+        // Restore auto-wallpaper preference
+        if (WallpaperService.IsSupported)
+        {
+            var autoWallStr = await JS.InvokeAsync<string?>("localStorage.getItem", "autoWallpaper");
+            if (autoWallStr == "true")
+            {
+                _autoWallpaper = true;
+                StartWallpaperTimerIfNeeded();
+            }
+        }
 
         // Start 1-second countdown timer
         _countdownTimer = new Timer(1000);
@@ -512,6 +567,99 @@
         StartSlideshowTimerIfNeeded();
     }
 
+    // ─── Wallpaper ────────────────────────────────────────────────────────────
+
+    private async Task SetWallpaperNow()
+    {
+        if (_wallpaperBusy) return;
+        _wallpaperBusy = true;
+        _wallpaperStatus = string.Empty;
+        StateHasChanged();
+        try
+        {
+            var imageBytes = await GetCurrentImageBytes();
+            var data = BuildWallpaperData(imageBytes);
+            var png = Services.WallpaperGenerator.GeneratePng(data);
+            await WallpaperService.SetWallpaperAsync(png);
+            _wallpaperStatus = T("wallpaperSet");
+        }
+        catch
+        {
+            _wallpaperStatus = T("wallpaperError");
+        }
+        finally
+        {
+            _wallpaperBusy = false;
+        }
+        StateHasChanged();
+    }
+
+    private async Task OnAutoWallpaperChanged()
+    {
+        await JS.InvokeVoidAsync("localStorage.setItem", "autoWallpaper", _autoWallpaper ? "true" : "false");
+        if (_autoWallpaper)
+            StartWallpaperTimerIfNeeded();
+        else
+            StopWallpaperTimer();
+    }
+
+    private void StartWallpaperTimerIfNeeded()
+    {
+        if (_wallpaperTimer != null) return;
+        _wallpaperTimer = new Timer(60_000);
+        _wallpaperTimer.Elapsed += OnWallpaperTick;
+        _wallpaperTimer.AutoReset = true;
+        _wallpaperTimer.Start();
+    }
+
+    private void StopWallpaperTimer()
+    {
+        _wallpaperTimer?.Stop();
+        _wallpaperTimer?.Dispose();
+        _wallpaperTimer = null;
+    }
+
+    private void OnWallpaperTick(object? sender, ElapsedEventArgs e)
+        => InvokeAsync(SetWallpaperNow);
+
+    private Services.WallpaperData BuildWallpaperData(byte[]? imageBytes) => new(
+        TargetDate: _targetDate,
+        TotalDays: TotalDays,
+        Years: Years,
+        Months: Months,
+        Days: Days,
+        Hours: Hours,
+        Minutes: Minutes,
+        Seconds: Seconds,
+        CurrentTime: _currentTime,
+        BackgroundImageBytes: imageBytes,
+        Culture: _currentCulture);
+
+    private async Task<byte[]?> GetCurrentImageBytes()
+    {
+        var src = CurrentImageSrc;
+        if (string.IsNullOrEmpty(src)) return null;
+
+        if (src.StartsWith("data:"))
+        {
+            // data URL — extract the base64 payload after the comma
+            var commaIdx = src.IndexOf(',');
+            if (commaIdx < 0) return null;
+            try { return Convert.FromBase64String(src[(commaIdx + 1)..]); }
+            catch { return null; }
+        }
+
+        // MAUI asset (e.g. "images/1.jpg")
+        try
+        {
+            await using var stream = await FileSystem.OpenAppPackageFileAsync(src);
+            using var ms = new MemoryStream();
+            await stream.CopyToAsync(ms);
+            return ms.ToArray();
+        }
+        catch { return null; }
+    }
+
     public async ValueTask DisposeAsync()
     {
         if (_countdownTimer != null)
@@ -520,6 +668,7 @@
             _countdownTimer.Dispose();
         }
         StopSlideshowTimer();
+        StopWallpaperTimer();
         await ValueTask.CompletedTask;
     }
 }

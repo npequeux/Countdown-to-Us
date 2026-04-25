@@ -8,4 +8,9 @@
     <RootNamespace>CountdownToUs.Linux</RootNamespace>
   </PropertyGroup>
 
+  <ItemGroup>
+    <PackageReference Include="SkiaSharp" Version="3.119.2" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux" Version="3.119.2" />
+  </ItemGroup>
+
 </Project>

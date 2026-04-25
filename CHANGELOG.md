@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.4] - Wallpaper Release
+
+### Added
+- **Real wallpaper app** — the countdown timer now sets the system desktop wallpaper across all environments
+- **MAUI (Windows)**: "Set as Wallpaper" button renders a 1920×1080 PNG via SkiaSharp and applies it using the `SystemParametersInfo` Win32 API
+- **MAUI (Android)**: Same button uses `WallpaperManager` to set the system home-screen/lock-screen wallpaper; requires `SET_WALLPAPER` permission (declared in `AndroidManifest.xml`)
+- **Auto-update wallpaper** toggle (persisted in `localStorage`) — updates the wallpaper every minute so the countdown stays current
+- **Linux host** (`linux-host/`): new `WallpaperUpdateHostedService` background service that renders the wallpaper with SkiaSharp and applies it automatically on startup and every minute; supports GNOME (`gsettings`), KDE (`plasma-apply-wallpaperimage`), XFCE (`xfconf-query`), and generic tools (`feh`, `nitrogen`, `xwallpaper`)
+- `appsettings.json` for the Linux host — configure `TargetDate`, `UpdateIntervalMinutes`, and an optional `BackgroundImagePath`
+- SkiaSharp 3.119.2 dependency added to both MAUI and Linux host projects
+- iOS and Mac Catalyst stubs for `IWallpaperService` (wallpaper setting is not supported on those platforms; UI controls are hidden automatically)
+- Full i18n for the new wallpaper settings group (EN / FR / ES / ZH)
+
+### Wallpaper image layout (1920×1080)
+- Cover-fit background image (current slideshow photo) or dark blue gradient fallback
+- 45 % dark overlay for text contrast
+- Title, giant total-days counter, years/months/days breakdown
+- HH : MM : SS columns
+- Target date and current date/time footer
+
 ## [v0.3] - Paradise Island Release
 
 ### Changed
