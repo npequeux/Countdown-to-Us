@@ -651,18 +651,19 @@
 #endif
     }
 
-
-        TargetDate: _targetDate,
-        TotalDays: TotalDays,
-        Years: Years,
-        Months: Months,
-        Days: Days,
-        Hours: Hours,
-        Minutes: Minutes,
-        Seconds: Seconds,
-        CurrentTime: _currentTime,
-        BackgroundImageBytes: imageBytes,
-        Culture: _currentCulture);
+    private Services.WallpaperData BuildWallpaperData(byte[]? imageBytes)
+        => new Services.WallpaperData(
+            TargetDate: _targetDate,
+            TotalDays: TotalDays,
+            Years: Years,
+            Months: Months,
+            Days: Days,
+            Hours: Hours,
+            Minutes: Minutes,
+            Seconds: Seconds,
+            CurrentTime: _currentTime,
+            BackgroundImageBytes: imageBytes,
+            Culture: _currentCulture);
 
     private async Task<byte[]?> GetCurrentImageBytes()
     {
