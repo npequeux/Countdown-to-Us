@@ -15,9 +15,6 @@ name: Private Build
 #   ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD
 
 on:
-  push:
-    tags:
-      - 'private-v*'
   workflow_dispatch:
     inputs:
       version:
