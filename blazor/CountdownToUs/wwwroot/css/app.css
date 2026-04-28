@@ -265,3 +265,14 @@ h1 {
         max-width: calc(100vw - 3rem);
     }
 }
+
+@media (orientation: portrait) {
+    body {
+        background-size: contain;
+        background-position: center center;
+    }
+
+    .us-image {
+        object-fit: contain;
+    }
+}
