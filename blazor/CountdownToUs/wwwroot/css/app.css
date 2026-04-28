@@ -268,13 +268,11 @@ h1 {
 
 @media (orientation: portrait) {
     body {
-        background-size: 100% auto;
-        background-position: center top;
+        background-size: cover;
+        background-position: center center;
     }
 
-    .us-image {
-        width: 100%;
-        height: auto;
-        object-fit: contain;
+    .image-container {
+        display: none;
     }
 }
