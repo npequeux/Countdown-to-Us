@@ -11,6 +11,15 @@ public static class WallpaperGenerator
     private const int DefaultWidth  = 1920;
     private const int DefaultHeight = 1080;
 
+    /// <summary>
+    /// Extra multiplier applied to font sizes when rendering in portrait orientation.
+    /// The reference layout is landscape (1920×1080), so the raw font scale factor
+    /// (width/1920) would be only ~0.56 on a 1080-wide phone – too small to read
+    /// comfortably as a screensaver.  Multiplying by 1.5 brings it up to ~0.84,
+    /// producing clearly legible text on portrait phone displays.
+    /// </summary>
+    private const float PortraitFontScale = 1.5f;
+
     public static byte[] GeneratePng(WallpaperData data, int width = DefaultWidth, int height = DefaultHeight)
     {
         var info = new SKImageInfo(width, height, SKColorType.Rgba8888, SKAlphaType.Premul);
@@ -91,7 +100,11 @@ public static class WallpaperGenerator
         float scaleX = width  / (float)DefaultWidth;
         float scaleY = height / (float)DefaultHeight;
         // Font sizes are constrained by the narrower dimension so text always fits.
-        float fs     = Math.Min(scaleX, scaleY);
+        // In portrait orientation the raw scaleX is only ~0.56, so apply an extra
+        // multiplier to keep text legible on phone-sized screens.
+        bool  isPortrait = height > width;
+        float fsRaw      = Math.Min(scaleX, scaleY);
+        float fs         = isPortrait ? fsRaw * PortraitFontScale : fsRaw;
 
         // Title
         DrawCenteredText(canvas, "Countdown to Us", cx, 105f * scaleY, 68f * fs, SKColors.White, bold: false);
