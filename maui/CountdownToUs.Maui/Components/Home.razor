@@ -135,7 +135,7 @@
             ["currentTime"] = "Current time",
             ["wallpaperLabel"] = "Desktop Wallpaper",
             ["setWallpaper"] = "Set as Wallpaper",
-            ["autoWallpaper"] = "Auto-update wallpaper (every minute)",
+            ["autoWallpaper"] = "Auto-update wallpaper (every second)",
             ["wallpaperSet"] = "✓ Wallpaper updated",
             ["wallpaperError"] = "Failed to set wallpaper",
             ["locale"] = "en-US"
@@ -160,7 +160,7 @@
             ["currentTime"] = "Heure actuelle",
             ["wallpaperLabel"] = "Fond d'écran",
             ["setWallpaper"] = "Définir comme fond d'écran",
-            ["autoWallpaper"] = "Mise à jour auto du fond d'écran (chaque minute)",
+            ["autoWallpaper"] = "Mise à jour auto du fond d'écran (chaque seconde)",
             ["wallpaperSet"] = "✓ Fond d'écran mis à jour",
             ["wallpaperError"] = "Impossible de définir le fond d'écran",
             ["locale"] = "fr-FR"
@@ -185,7 +185,7 @@
             ["currentTime"] = "Hora actual",
             ["wallpaperLabel"] = "Fondo de escritorio",
             ["setWallpaper"] = "Establecer como fondo",
-            ["autoWallpaper"] = "Actualizar fondo automáticamente (cada minuto)",
+            ["autoWallpaper"] = "Actualizar fondo automáticamente (cada segundo)",
             ["wallpaperSet"] = "✓ Fondo actualizado",
             ["wallpaperError"] = "No se pudo establecer el fondo",
             ["locale"] = "es-ES"
@@ -210,7 +210,7 @@
             ["currentTime"] = "当前时间",
             ["wallpaperLabel"] = "桌面壁纸",
             ["setWallpaper"] = "设置为壁纸",
-            ["autoWallpaper"] = "自动更新壁纸（每分钟）",
+            ["autoWallpaper"] = "自动更新壁纸（每秒）",
             ["wallpaperSet"] = "✓ 壁纸已更新",
             ["wallpaperError"] = "设置壁纸失败",
             ["locale"] = "zh-CN"
@@ -267,6 +267,7 @@
     private bool _wallpaperBusy;
     private string _wallpaperStatus = string.Empty;
     private Timer? _wallpaperTimer;
+    private int _lastWallpaperSeconds = -1;
 
     protected override async Task OnInitializedAsync()
     {
@@ -559,7 +560,7 @@
     private void StartWallpaperTimerIfNeeded()
     {
         if (_wallpaperTimer != null) return;
-        _wallpaperTimer = new Timer(60_000);
+        _wallpaperTimer = new Timer(1_000);
         _wallpaperTimer.Elapsed += OnWallpaperTick;
         _wallpaperTimer.AutoReset = true;
         _wallpaperTimer.Start();
@@ -573,7 +574,13 @@
     }
 
     private void OnWallpaperTick(object? sender, ElapsedEventArgs e)
-        => InvokeAsync(SetWallpaperNow);
+    {
+        // Only regenerate the wallpaper when the seconds value has changed to avoid
+        // redundant PNG generation and system wallpaper API calls within the same second.
+        if (Seconds == _lastWallpaperSeconds) return;
+        _lastWallpaperSeconds = Seconds;
+        InvokeAsync(SetWallpaperNow);
+    }
 
     /// <summary>
     /// Returns the pixel dimensions to use when generating the wallpaper image.
