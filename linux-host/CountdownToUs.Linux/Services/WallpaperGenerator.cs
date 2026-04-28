@@ -286,7 +286,7 @@ public static class WallpaperGenerator
                 Color       = new SKColor(0, 0, 0, 77),   // 0.3 × 255
                 IsAntialias = true,
             };
-            canvas.DrawText(text, cx + 2f, y + 4f, SKTextAlign.Center, font, shadowPaint);
+            canvas.DrawText(text, cx + 2f, y + 2f, SKTextAlign.Center, font, shadowPaint);
         }
 
         using var paint = new SKPaint
