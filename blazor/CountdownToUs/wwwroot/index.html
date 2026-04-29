@@ -36,6 +36,22 @@
         window.setHtmlLang = function (lang) {
             document.documentElement.setAttribute('lang', lang);
         };
+        window.updateCountdownDisplay = function (days, hours, minutes, seconds, breakdown) {
+            var animateUpdate = function (id, val) {
+                var el = document.getElementById(id);
+                if (!el || el.textContent.trim() === val) return;
+                el.textContent = val;
+                el.style.animation = 'none';
+                void el.offsetWidth;
+                el.style.animation = '';
+            };
+            animateUpdate('cnt-days', days);
+            animateUpdate('cnt-hours', hours);
+            animateUpdate('cnt-minutes', minutes);
+            animateUpdate('cnt-seconds', seconds);
+            var bd = document.getElementById('cnt-breakdown');
+            if (bd) bd.textContent = breakdown;
+        };
     </script>
 </body>
 
