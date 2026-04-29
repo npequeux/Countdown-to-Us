@@ -241,7 +241,7 @@ public static class WallpaperGenerator
         float lblSize = 28f * L.Fs;
         float colW    = L.ContentW / 4f;
 
-        string[] nums = { data.Years.ToString(), data.Months.ToString(), data.Days.ToString(), data.Hours.ToString("D2") };
+        string[] nums = { data.Years.ToString(), data.Months.ToString(), data.Days.ToString(), data.Hours.ToString() };
         string[] lbls = { "YEARS", "MONTHS", "DAYS", "HOURS" };
 
         for (int i = 0; i < 4; i++)
