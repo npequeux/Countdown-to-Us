@@ -570,9 +570,41 @@
 
     // ─── Wallpaper ────────────────────────────────────────────────────────────
 
+    /// <summary>
+    /// Physical-pixel width threshold below which a display is considered a foldable
+    /// cover screen.  The Samsung Galaxy Z Flip cover screen is ~260 px wide, while
+    /// any normal phone display is at least 480 px wide, so 400 px is a safe boundary.
+    /// </summary>
+    private const int CoverScreenWidthThreshold = 400;
+
+    /// <summary>
+    /// Returns true when the active Android display is the small cover screen of a
+    /// foldable device (e.g. Samsung Galaxy Z Flip).  The Z Flip cover screen is
+    /// approximately 260 × 512 physical pixels, so <see cref="CoverScreenWidthThreshold"/>
+    /// on the shorter side reliably distinguishes it from any normal phone display.
+    /// On all other platforms this always returns false.
+    /// </summary>
+    private static bool IsCoverScreen()
+    {
+#if ANDROID
+        var info = DeviceDisplay.Current.MainDisplayInfo;
+        int width  = (int)info.Width;
+        int height = (int)info.Height;
+        int shorter = Math.Min(width, height);
+        return shorter > 0 && shorter < CoverScreenWidthThreshold;
+#else
+        return false;
+#endif
+    }
+
     private async Task SetWallpaperNow()
     {
         if (_wallpaperBusy) return;
+
+        // Do not update the wallpaper when running on the small cover screen of a
+        // foldable (e.g. Samsung Galaxy Z Flip). Wallpaper changes should only apply
+        // to the main (inner) display.
+        if (IsCoverScreen()) return;
         _wallpaperBusy = true;
         _wallpaperStatus = string.Empty;
         StateHasChanged();
