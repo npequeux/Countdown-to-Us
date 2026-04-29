@@ -285,3 +285,53 @@ h1 {
         background-position: center center;
     }
 }
+
+/* Wallpaper mode */
+.wallpaper-countdown {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 3rem;
+    flex-wrap: wrap;
+    z-index: 1;
+}
+
+.wallpaper-countdown .time-unit {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 120px;
+}
+
+.wallpaper-countdown .number {
+    font-size: 6rem;
+    font-weight: bold;
+    line-height: 1;
+    text-shadow: 3px 3px 8px rgba(0, 0, 0, 0.7);
+    display: inline-block;
+}
+
+.wallpaper-countdown .label {
+    font-size: 1.2rem;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    margin-top: 0.5rem;
+    opacity: 0.9;
+    text-shadow: 1px 1px 4px rgba(0, 0, 0, 0.7);
+}
+
+@media (max-width: 768px) {
+    .wallpaper-countdown {
+        gap: 1.5rem;
+    }
+
+    .wallpaper-countdown .number {
+        font-size: 4rem;
+    }
+
+    .wallpaper-countdown .label {
+        font-size: 1rem;
+    }
+}

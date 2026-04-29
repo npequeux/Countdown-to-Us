@@ -72,6 +72,9 @@
                     <InputFile id="photo-upload" accept="image/*" multiple OnChange="HandlePhotoUpload" />
                     <button class="btn btn-danger" @onclick="ClearPhotos">@T("clearPhotos")</button>
                 </div>
+                <div class="settings-group">
+                    <a class="btn" href="/wallpaper" target="_blank" rel="noopener">@T("wallpaperMode")</a>
+                </div>
             </div>
         }
     </div>
@@ -115,6 +118,7 @@
             ["prevImage"] = "Previous image",
             ["nextImage"] = "Next image",
             ["currentTime"] = "Current time",
+            ["wallpaperMode"] = "Wallpaper mode",
             ["locale"] = "en-US"
         },
         ["fr"] = new()
@@ -135,6 +139,7 @@
             ["prevImage"] = "Image précédente",
             ["nextImage"] = "Image suivante",
             ["currentTime"] = "Heure actuelle",
+            ["wallpaperMode"] = "Mode fond d'écran",
             ["locale"] = "fr-FR"
         },
         ["es"] = new()
@@ -155,6 +160,7 @@
             ["prevImage"] = "Imagen anterior",
             ["nextImage"] = "Imagen siguiente",
             ["currentTime"] = "Hora actual",
+            ["wallpaperMode"] = "Modo fondo de pantalla",
             ["locale"] = "es-ES"
         },
         ["zh"] = new()
@@ -175,6 +181,7 @@
             ["prevImage"] = "上一张",
             ["nextImage"] = "下一张",
             ["currentTime"] = "当前时间",
+            ["wallpaperMode"] = "壁纸模式",
             ["locale"] = "zh-CN"
         }
     };
