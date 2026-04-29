@@ -100,10 +100,10 @@ public static class WallpaperGenerator
     }
 
     /// <summary>
-    /// Renders the background, overlay, and card — everything except the countdown
+    /// Renders the background, overlay, card, and photo — everything except the countdown
     /// numbers that change every hour.  Store the returned bytes and pass them to
     /// <see cref="UpdateCountdownPng"/> on each tick so the expensive background
-    /// decode only happens once per slideshow image change.
+    /// decode and photo composite only happen once per slideshow image change.
     /// </summary>
     public static byte[] GenerateBackground(WallpaperData data, int width = DefaultWidth, int height = DefaultHeight)
     {
@@ -207,14 +207,26 @@ public static class WallpaperGenerator
     // ─── Content ───────────────────────────────────────────────────────────────
 
     /// <summary>
-    /// Draws the static portions of the wallpaper (card) and returns
+    /// Draws the static portions of the wallpaper (card and photo) and returns
     /// the Y coordinate at which the dynamic countdown content should begin.
     /// </summary>
     private static float DrawStaticContent(SKCanvas canvas, WallpaperData data, int width, int height)
     {
         var L = ComputeLayout(width, height);
         DrawCard(canvas, L.CardX, L.CardY, L.CardW, L.CardH, L.CardRadius);
-        return L.InnerPadY;
+
+        float y = L.InnerPadY;
+
+        // Photo inside card (cover-fit, rounded corners)
+        if (data.BackgroundImageBytes is { Length: > 0 })
+        {
+            float imgH = L.IsPortrait ? L.CardH * 0.38f : L.CardH * 0.45f;
+            DrawRoundedPhoto(canvas, data.BackgroundImageBytes,
+                L.ContentX, y, L.ContentW, imgH, 20f * L.Scale);
+            y += imgH + 30f * L.ScaleY;
+        }
+
+        return y;
     }
 
     /// <summary>
@@ -225,7 +237,16 @@ public static class WallpaperGenerator
     private static float ComputeCountdownY(WallpaperData data, int width, int height)
     {
         var L = ComputeLayout(width, height);
-        return L.InnerPadY;
+
+        float y = L.InnerPadY;
+
+        if (data.BackgroundImageBytes is { Length: > 0 })
+        {
+            float imgH = L.IsPortrait ? L.CardH * 0.38f : L.CardH * 0.45f;
+            y += imgH + 30f * L.ScaleY;
+        }
+
+        return y;
     }
 
     /// <summary>
@@ -279,6 +300,31 @@ public static class WallpaperGenerator
             IsAntialias = true,
         };
         canvas.DrawRoundRect(rrect, borderPaint);
+    }
+
+    // ─── Rounded photo ───────────────────────────────────────────────────────────
+
+    private static void DrawRoundedPhoto(
+        SKCanvas canvas, byte[] imageBytes,
+        float x, float y, float w, float h, float radius)
+    {
+        try
+        {
+            using var bitmap = SKBitmap.Decode(imageBytes);
+            if (bitmap == null) return;
+
+            var rect  = new SKRect(x, y, x + w, y + h);
+            var rrect = new SKRoundRect(rect, radius);
+
+            canvas.Save();
+            canvas.ClipRoundRect(rrect, antialias: true);
+            DrawCoverFitBitmap(canvas, bitmap, x, y, w, h);
+            canvas.Restore();
+        }
+        catch
+        {
+            // Silently skip the photo if the bytes cannot be decoded.
+        }
     }
 
     // ─── Helpers ────────────────────────────────────────────────────────────────
