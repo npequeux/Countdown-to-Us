@@ -1,0 +1,191 @@
+@page "/wallpaper"
+@using System.Timers
+@using System.Linq
+@implements IAsyncDisposable
+@inject IJSRuntime JS
+
+<PageTitle>Countdown to Us – Wallpaper</PageTitle>
+
+<div class="wallpaper-countdown">
+    <div class="time-unit">
+        <span class="number">@Years</span>
+        <span class="label">@T("years")</span>
+    </div>
+    <div class="time-unit">
+        <span class="number">@Months</span>
+        <span class="label">@T("months")</span>
+    </div>
+    <div class="time-unit">
+        <span class="number">@Days</span>
+        <span class="label">@T("days")</span>
+    </div>
+    <div class="time-unit">
+        <span class="number">@Hours.ToString("D2")</span>
+        <span class="label">@T("hours")</span>
+    </div>
+</div>
+
+@code {
+    private const string DefaultTargetDate = "2028-10-01T00:00:00";
+    private static readonly string[] DefaultImages = new[]
+    {
+        "images/1.jpg",
+        "images/2.jpg",
+        "images/3.jpg",
+        "images/4.jpg",
+        "images/5.jpg",
+        "images/6.jpg",
+        "images/7.jpg",
+        "images/8.jpg",
+        "images/9.jpg",
+        "images/10.jpg"
+    };
+    private const int SlideshowIntervalMs = 5000;
+    private const int HourlyUpdateIntervalMs = 3_600_000;
+
+    private static readonly Dictionary<string, Dictionary<string, string>> Translations = new()
+    {
+        ["en"] = new() { ["years"] = "Years", ["months"] = "Months", ["days"] = "Days", ["hours"] = "Hours", ["locale"] = "en-US" },
+        ["fr"] = new() { ["years"] = "Ans", ["months"] = "Mois", ["days"] = "Jours", ["hours"] = "Heures", ["locale"] = "fr-FR" },
+        ["es"] = new() { ["years"] = "Años", ["months"] = "Meses", ["days"] = "Días", ["hours"] = "Horas", ["locale"] = "es-ES" },
+        ["zh"] = new() { ["years"] = "年", ["months"] = "月", ["days"] = "天", ["hours"] = "小时", ["locale"] = "zh-CN" }
+    };
+
+    private string _currentLang = "en";
+    private string T(string key)
+    {
+        if (Translations.TryGetValue(_currentLang, out var dict) && dict.TryGetValue(key, out var val))
+            return val;
+        if (Translations.TryGetValue("en", out var enDict) && enDict.TryGetValue(key, out var fallback))
+            return fallback;
+        return key;
+    }
+
+    private DateTime _targetDate;
+    private Timer? _hourlyTimer;
+    private Timer? _slideshowTimer;
+
+    private int Years { get; set; }
+    private int Months { get; set; }
+    private int Days { get; set; }
+    private int Hours { get; set; }
+
+    private List<string> _defaultImages = DefaultImages.OrderBy(_ => Random.Shared.Next()).ToList();
+    private List<string> SlideshowImages { get; set; } = new();
+    private int CurrentSlide { get; set; }
+    private List<string> ActiveImages => SlideshowImages.Count > 0 ? SlideshowImages : _defaultImages;
+    private string CurrentImageSrc => ActiveImages.Count > 0 ? ActiveImages[CurrentSlide] : string.Empty;
+    private string _lastBackgroundUrl = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var storedLang = await JS.InvokeAsync<string?>("localStorage.getItem", "language");
+        if (!string.IsNullOrEmpty(storedLang) && Translations.ContainsKey(storedLang))
+            _currentLang = storedLang;
+
+        var stored = await JS.InvokeAsync<string?>("localStorage.getItem", "targetDate");
+        _targetDate = DateTime.Parse(stored ?? DefaultTargetDate, System.Globalization.CultureInfo.InvariantCulture);
+
+        var imagesJson = await JS.InvokeAsync<string?>("localStorage.getItem", "slideshowImages");
+        if (!string.IsNullOrEmpty(imagesJson))
+        {
+            try
+            {
+                var images = System.Text.Json.JsonSerializer.Deserialize<List<string>>(imagesJson);
+                if (images != null) SlideshowImages = images;
+            }
+            catch { /* ignore corrupt data */ }
+        }
+
+        UpdateCountdown();
+
+        _hourlyTimer = new Timer(HourlyUpdateIntervalMs);
+        _hourlyTimer.Elapsed += OnHourlyTick;
+        _hourlyTimer.AutoReset = true;
+        _hourlyTimer.Start();
+
+        if (ActiveImages.Count > 1)
+        {
+            _slideshowTimer = new Timer(SlideshowIntervalMs);
+            _slideshowTimer.Elapsed += OnSlideshowTick;
+            _slideshowTimer.AutoReset = true;
+            _slideshowTimer.Start();
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+            await JS.InvokeVoidAsync("setHtmlLang", T("locale").Split('-')[0]);
+        var url = CurrentImageSrc;
+        if (!string.IsNullOrEmpty(url) && url != _lastBackgroundUrl)
+        {
+            _lastBackgroundUrl = url;
+            await JS.InvokeVoidAsync("setBodyBackground", url);
+        }
+    }
+
+    private void OnHourlyTick(object? sender, ElapsedEventArgs e)
+    {
+        UpdateCountdown();
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void OnSlideshowTick(object? sender, ElapsedEventArgs e)
+    {
+        CurrentSlide = (CurrentSlide + 1) % ActiveImages.Count;
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void UpdateCountdown()
+    {
+        var now = DateTime.Now;
+        var distance = _targetDate - now;
+
+        if (distance <= TimeSpan.Zero)
+        {
+            Years = Months = Days = Hours = 0;
+            return;
+        }
+
+        var startDate = now.Date;
+        var endDate = startDate.AddDays((int)distance.TotalDays);
+
+        int years = endDate.Year - startDate.Year;
+        int months = endDate.Month - startDate.Month;
+        int days = endDate.Day - startDate.Day;
+
+        if (days < 0)
+        {
+            months--;
+            int borrowYear = endDate.Month == 1 ? endDate.Year - 1 : endDate.Year;
+            int borrowMonth = endDate.Month == 1 ? 12 : endDate.Month - 1;
+            days += DateTime.DaysInMonth(borrowYear, borrowMonth);
+        }
+        if (months < 0)
+        {
+            years--;
+            months += 12;
+        }
+
+        Years = years;
+        Months = months;
+        Days = days;
+        Hours = distance.Hours;
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_hourlyTimer != null)
+        {
+            _hourlyTimer.Stop();
+            _hourlyTimer.Dispose();
+        }
+        if (_slideshowTimer != null)
+        {
+            _slideshowTimer.Stop();
+            _slideshowTimer.Dispose();
+        }
+        await ValueTask.CompletedTask;
+    }
+}
