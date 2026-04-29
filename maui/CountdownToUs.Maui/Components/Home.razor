@@ -21,19 +21,19 @@
 
     <div class="countdown">
         <div class="time-unit">
-            <span class="number">@TotalDays</span>
+            <span class="number" @key="TotalDays">@TotalDays</span>
             <span class="label">@T("days")</span>
         </div>
         <div class="time-unit">
-            <span class="number">@Hours.ToString("D2")</span>
+            <span class="number" @key="Hours">@Hours.ToString("D2")</span>
             <span class="label">@T("hours")</span>
         </div>
         <div class="time-unit">
-            <span class="number">@Minutes.ToString("D2")</span>
+            <span class="number" @key="Minutes">@Minutes.ToString("D2")</span>
             <span class="label">@T("minutes")</span>
         </div>
         <div class="time-unit">
-            <span class="number">@Seconds.ToString("D2")</span>
+            <span class="number" @key="Seconds">@Seconds.ToString("D2")</span>
             <span class="label">@T("seconds")</span>
         </div>
     </div>
