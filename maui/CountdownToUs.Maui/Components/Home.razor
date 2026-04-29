@@ -21,24 +21,24 @@
 
     <div class="countdown">
         <div class="time-unit">
-            <span class="number" @key="TotalDays">@TotalDays</span>
+            <span class="number" id="cnt-days">@TotalDays</span>
             <span class="label">@T("days")</span>
         </div>
         <div class="time-unit">
-            <span class="number" @key="Hours">@Hours.ToString("D2")</span>
+            <span class="number" id="cnt-hours">@Hours.ToString("D2")</span>
             <span class="label">@T("hours")</span>
         </div>
         <div class="time-unit">
-            <span class="number" @key="Minutes">@Minutes.ToString("D2")</span>
+            <span class="number" id="cnt-minutes">@Minutes.ToString("D2")</span>
             <span class="label">@T("minutes")</span>
         </div>
         <div class="time-unit">
-            <span class="number" @key="Seconds">@Seconds.ToString("D2")</span>
+            <span class="number" id="cnt-seconds">@Seconds.ToString("D2")</span>
             <span class="label">@T("seconds")</span>
         </div>
     </div>
 
-    <div class="days-breakdown">@Years @T("years"), @Months @T("months"), @Days @T("days")</div>
+    <div class="days-breakdown" id="cnt-breakdown">@DaysBreakdown</div>
 
     <div class="target-date">@TargetDateDisplay</div>
 
@@ -250,6 +250,7 @@
     // Display strings
     private string CountdownTitle => $"{T("countdownTo")} {_targetDate.ToString("MMMM d, yyyy", _currentCulture)}";
     private string TargetDateDisplay => $"{T("targetDatePrefix")} {_targetDate.ToString("MMMM d, yyyy 'at' hh:mm:ss tt", _currentCulture)}";
+    private string DaysBreakdown => $"{Years} {T("years")}, {Months} {T("months")}, {Days} {T("days")}";
 
     // Slideshow
     private List<string> _defaultImages = DefaultImages.OrderBy(_ => Random.Shared.Next()).ToList();
@@ -333,7 +334,17 @@
     private void OnCountdownTick(object? sender, ElapsedEventArgs e)
     {
         UpdateCountdown();
-        InvokeAsync(StateHasChanged);
+        InvokeAsync(UpdateCountdownDisplayAsync);
+    }
+
+    private async Task UpdateCountdownDisplayAsync()
+    {
+        await JS.InvokeVoidAsync("updateCountdownDisplay",
+            TotalDays.ToString(),
+            Hours.ToString("D2"),
+            Minutes.ToString("D2"),
+            Seconds.ToString("D2"),
+            DaysBreakdown);
     }
 
     private void UpdateCountdown()
