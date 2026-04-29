@@ -20,6 +20,10 @@ public static class WallpaperGenerator
     /// </summary>
     private const float PortraitFontScale = 1.5f;
 
+    // Card colours — mirror the glassmorphism theme of the web app.
+    private static readonly SKColor CardFillColor   = new(10, 50, 80, 204);   // rgba(10,50,80,0.80)
+    private static readonly SKColor CardBorderColor = new(255, 255, 255, 46); // rgba(255,255,255,0.18)
+
     public static byte[] GeneratePng(WallpaperData data, int width = DefaultWidth, int height = DefaultHeight)
     {
         var info = new SKImageInfo(width, height, SKColorType.Rgba8888, SKAlphaType.Premul);
@@ -68,19 +72,24 @@ public static class WallpaperGenerator
     }
 
     private static void DrawCoverFitBitmap(SKCanvas canvas, SKBitmap bitmap, int width, int height)
+        => DrawCoverFitBitmap(canvas, bitmap, 0, 0, width, height);
+
+    private static void DrawCoverFitBitmap(
+        SKCanvas canvas, SKBitmap bitmap,
+        float destX, float destY, float destW, float destH)
     {
-        float scaleX = (float)width  / bitmap.Width;
-        float scaleY = (float)height / bitmap.Height;
+        float scaleX = destW / bitmap.Width;
+        float scaleY = destH / bitmap.Height;
         float scale  = Math.Max(scaleX, scaleY);
 
-        float srcW = width  / scale;
-        float srcH = height / scale;
+        float srcW = destW / scale;
+        float srcH = destH / scale;
         float srcX = (bitmap.Width  - srcW) / 2f;
         float srcY = (bitmap.Height - srcH) / 2f;
 
         canvas.DrawBitmap(bitmap,
             new SKRect(srcX, srcY, srcX + srcW, srcY + srcH),
-            new SKRect(0, 0, width, height));
+            new SKRect(destX, destY, destX + destW, destY + destH));
     }
 
     // ─── Semi-transparent overlay ───────────────────────────────────────────────
@@ -95,62 +104,132 @@ public static class WallpaperGenerator
 
     private static void DrawContent(SKCanvas canvas, WallpaperData data, int width, int height)
     {
-        // Scale all coordinates relative to the 1920×1080 reference layout.
-        float cx     = width / 2f;
-        float scaleX = width  / (float)DefaultWidth;
-        float scaleY = height / (float)DefaultHeight;
-        // Font sizes are constrained by the narrower dimension so text always fits.
-        // In portrait orientation the raw scaleX is only ~0.56, so apply an extra
-        // multiplier to keep text legible on phone-sized screens.
         bool  isPortrait = height > width;
-        float fsRaw      = Math.Min(scaleX, scaleY);
-        float fs         = isPortrait ? fsRaw * PortraitFontScale : fsRaw;
+        float cx         = width / 2f;
 
-        // Title
-        DrawCenteredText(canvas, "Countdown to Us", cx, 105f * scaleY, 68f * fs, SKColors.White, bold: false);
+        // Font scale: constrained by the narrower dimension ratio, with an extra
+        // multiplier in portrait so text stays legible on phone-sized screens.
+        float fsRaw = Math.Min((float)width / DefaultWidth, (float)height / DefaultHeight);
+        float fs    = isPortrait ? fsRaw * PortraitFontScale : fsRaw;
 
-        // Separator line
-        DrawHLine(canvas, cx - 380f * scaleX, cx + 380f * scaleX, 135f * scaleY, new SKColor(255, 255, 255, 80), 1.5f);
+        // Layout scale relative to the 1920×1080 reference layout.
+        float scaleX = (float)width  / DefaultWidth;
+        float scaleY = (float)height / DefaultHeight;
+        float scale  = Math.Min(scaleX, scaleY);
 
-        // Total days (giant)
-        DrawCenteredText(canvas, data.TotalDays.ToString(), cx, 340f * scaleY, 210f * fs, SKColors.White, bold: true);
-        DrawCenteredText(canvas, "days", cx, 400f * scaleY, 50f * fs, new SKColor(255, 255, 255, 200), bold: false);
+        // ─── Glassmorphism card ──────────────────────────────────────────────
+        float cardMarginX = (isPortrait ? 54f : 200f) * scaleX;
+        float cardMarginY = (isPortrait ? 152f : 54f) * scaleY;
+        float cardX       = cardMarginX;
+        float cardY       = cardMarginY;
+        float cardW       = width  - 2f * cardMarginX;
+        float cardH       = height - 2f * cardMarginY;
+        float cardRadius  = 40f * scale;
 
-        // Years/Months/Days breakdown
-        string breakdown =
-            $"{data.Years} {Pluralise(data.Years, "year")}  •  " +
-            $"{data.Months} {Pluralise(data.Months, "month")}  •  " +
-            $"{data.Days} {Pluralise(data.Days, "day")}";
-        DrawCenteredText(canvas, breakdown, cx, 460f * scaleY, 34f * fs, new SKColor(255, 255, 255, 180), bold: false);
+        DrawCard(canvas, cardX, cardY, cardW, cardH, cardRadius);
 
-        // Separator line
-        DrawHLine(canvas, cx - 340f * scaleX, cx + 340f * scaleX, 493f * scaleY, new SKColor(255, 255, 255, 60), 1f);
+        // ─── Layout inside card ──────────────────────────────────────────────
+        float innerPad = 32f * scale;
+        float contentX = cardX + innerPad;
+        float contentW = cardW - 2f * innerPad;
+        float y        = cardY + innerPad + 20f * scaleY;
 
-        // Hours / Minutes / Seconds columns
-        float col1 = cx - 340f * scaleX;
-        float col2 = cx;
-        float col3 = cx + 340f * scaleX;
+        // Title: "Countdown to {date}"
+        string title     = $"Countdown to {data.TargetDate.ToString("MMMM d, yyyy", data.Culture)}";
+        float  titleSize = 68f * fs;
+        DrawCenteredText(canvas, title, cx, y + titleSize, titleSize, SKColors.White, bold: true);
+        y += titleSize * 1.2f + 20f * scaleY;
 
-        DrawCenteredText(canvas, data.Hours.ToString("D2"),   col1, 605f * scaleY, 110f * fs, SKColors.White, bold: true);
-        DrawCenteredText(canvas, data.Minutes.ToString("D2"), col2, 605f * scaleY, 110f * fs, SKColors.White, bold: true);
-        DrawCenteredText(canvas, data.Seconds.ToString("D2"), col3, 605f * scaleY, 110f * fs, SKColors.White, bold: true);
+        // Photo inside card (cover-fit, rounded corners)
+        if (data.BackgroundImageBytes is { Length: > 0 })
+        {
+            float imgH = isPortrait ? cardH * 0.38f : cardH * 0.45f;
+            DrawRoundedPhoto(canvas, data.BackgroundImageBytes,
+                contentX, y, contentW, imgH, 20f * scale);
+            y += imgH + 30f * scaleY;
+        }
 
-        DrawCenteredText(canvas, "Hours",   col1, 650f * scaleY, 30f * fs, new SKColor(255, 255, 255, 170), bold: false);
-        DrawCenteredText(canvas, "Minutes", col2, 650f * scaleY, 30f * fs, new SKColor(255, 255, 255, 170), bold: false);
-        DrawCenteredText(canvas, "Seconds", col3, 650f * scaleY, 30f * fs, new SKColor(255, 255, 255, 170), bold: false);
+        // Countdown row: DAYS | HOURS | MINUTES | SECONDS
+        float numSize = (isPortrait ? 110f : 90f) * fs;
+        float lblSize = 28f * fs;
+        float colW    = contentW / 4f;
 
-        // Colon separators
-        DrawCenteredText(canvas, ":", cx - 170f * scaleX, 595f * scaleY, 70f * fs, new SKColor(255, 255, 255, 120), bold: false);
-        DrawCenteredText(canvas, ":", cx + 170f * scaleX, 595f * scaleY, 70f * fs, new SKColor(255, 255, 255, 120), bold: false);
+        string[] nums = { data.TotalDays.ToString(), data.Hours.ToString("D2"), data.Minutes.ToString("D2"), data.Seconds.ToString("D2") };
+        string[] lbls = { "DAYS", "HOURS", "MINUTES", "SECONDS" };
 
-        // Target date
-        DrawCenteredText(canvas,
-            $"Until {data.TargetDate.ToString("MMMM d, yyyy", data.Culture)}",
-            cx, 730f * scaleY, 36f * fs, new SKColor(255, 255, 255, 210), bold: false);
+        for (int i = 0; i < 4; i++)
+        {
+            float colCx = contentX + colW * (i + 0.5f);
+            DrawCenteredText(canvas, nums[i], colCx, y + numSize, numSize, SKColors.White, bold: true);
+            DrawCenteredText(canvas, lbls[i], colCx, y + numSize + lblSize + 8f * scaleY, lblSize,
+                new SKColor(255, 255, 255, 204), bold: false);
+        }
+        y += numSize + lblSize + 40f * scaleY;
 
-        // Current date + time (bottom)
-        string nowDisplay = data.CurrentTime.ToString("dddd, MMMM d, yyyy  •  HH:mm", data.Culture);
-        DrawCenteredText(canvas, nowDisplay, cx, 1038f * scaleY, 28f * fs, new SKColor(255, 255, 255, 140), bold: false);
+        // Breakdown: "N Years, N Months, N Days"
+        float  brkSize       = 34f * fs;
+        string breakdownText = $"{data.Years} {Pluralise(data.Years, "Year")}, {data.Months} {Pluralise(data.Months, "Month")}, {data.Days} {Pluralise(data.Days, "Day")}";
+        DrawCenteredText(canvas, breakdownText, cx, y + brkSize, brkSize, new SKColor(255, 255, 255, 191), bold: false);
+        y += brkSize + 20f * scaleY;
+
+        // Target date: "Target Date: October 1, 2028 at 12:00:00 AM"
+        float  tdSize          = 30f * fs;
+        string targetDateLabel = $"Target Date: {data.TargetDate.ToString("MMMM d, yyyy 'at' hh:mm:ss tt", data.Culture)}";
+        DrawCenteredText(canvas, targetDateLabel, cx, y + tdSize, tdSize,
+            new SKColor(255, 255, 255, 230), bold: false);
+    }
+
+    // ─── Card ───────────────────────────────────────────────────────────────────
+
+    private static void DrawCard(SKCanvas canvas, float x, float y, float w, float h, float radius)
+    {
+        var rect  = new SKRect(x, y, x + w, y + h);
+        var rrect = new SKRoundRect(rect, radius);
+
+        // Semi-transparent dark-blue fill (simulates the glassmorphism card background
+        // without requiring CSS backdrop-filter; keeps text readable over any photo).
+        using var fillPaint = new SKPaint
+        {
+            Color       = CardFillColor,
+            Style       = SKPaintStyle.Fill,
+            IsAntialias = true,
+        };
+        canvas.DrawRoundRect(rrect, fillPaint);
+
+        // Subtle white border matching rgba(255,255,255,0.18) of the web card.
+        using var borderPaint = new SKPaint
+        {
+            Color       = CardBorderColor,
+            Style       = SKPaintStyle.Stroke,
+            StrokeWidth = 2f,
+            IsAntialias = true,
+        };
+        canvas.DrawRoundRect(rrect, borderPaint);
+    }
+
+    // ─── Rounded photo ───────────────────────────────────────────────────────────
+
+    private static void DrawRoundedPhoto(
+        SKCanvas canvas, byte[] imageBytes,
+        float x, float y, float w, float h, float radius)
+    {
+        try
+        {
+            using var bitmap = SKBitmap.Decode(imageBytes);
+            if (bitmap == null) return;
+
+            var rect  = new SKRect(x, y, x + w, y + h);
+            var rrect = new SKRoundRect(rect, radius);
+
+            canvas.Save();
+            canvas.ClipRoundRect(rrect, antialias: true);
+            DrawCoverFitBitmap(canvas, bitmap, x, y, w, h);
+            canvas.Restore();
+        }
+        catch
+        {
+            // Silently skip the photo if the bytes cannot be decoded.
+        }
     }
 
     // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -169,18 +248,6 @@ public static class WallpaperGenerator
             IsAntialias = true,
         };
         canvas.DrawText(text, cx, y, SKTextAlign.Center, font, paint);
-    }
-
-    private static void DrawHLine(
-        SKCanvas canvas, float x1, float x2, float y, SKColor color, float strokeWidth)
-    {
-        using var paint = new SKPaint
-        {
-            Color       = color,
-            StrokeWidth = strokeWidth,
-            Style       = SKPaintStyle.Stroke,
-        };
-        canvas.DrawLine(x1, y, x2, y, paint);
     }
 
     private static string Pluralise(int value, string singular)
