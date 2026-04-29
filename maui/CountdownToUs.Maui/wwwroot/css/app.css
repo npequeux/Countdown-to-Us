@@ -271,8 +271,4 @@ h1 {
         background-size: cover;
         background-position: center center;
     }
-
-    .image-container {
-        display: none;
-    }
 }
