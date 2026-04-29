@@ -24,6 +24,65 @@ public static class WallpaperGenerator
     private static readonly SKColor CardFillColor   = new(10, 50, 80, 204);   // rgba(10,50,80,0.80)
     private static readonly SKColor CardBorderColor = new(255, 255, 255, 46); // rgba(255,255,255,0.18)
 
+    /// <summary>Precomputed layout parameters derived from canvas dimensions.</summary>
+    private readonly record struct WallpaperLayout(
+        bool  IsPortrait,
+        float Cx,
+        float Fs,
+        float ScaleX,
+        float ScaleY,
+        float Scale,
+        float CardX,
+        float CardY,
+        float CardW,
+        float CardH,
+        float CardRadius,
+        float ContentX,
+        float ContentW,
+        float InnerPadY);
+
+    private static WallpaperLayout ComputeLayout(int width, int height)
+    {
+        bool  isPortrait = height > width;
+        float cx         = width / 2f;
+
+        float fsRaw = Math.Min((float)width / DefaultWidth, (float)height / DefaultHeight);
+        float fs    = isPortrait ? fsRaw * PortraitFontScale : fsRaw;
+
+        float scaleX = (float)width  / DefaultWidth;
+        float scaleY = (float)height / DefaultHeight;
+        float scale  = Math.Min(scaleX, scaleY);
+
+        float cardMarginX = (isPortrait ? 54f : 200f) * scaleX;
+        float cardMarginY = (isPortrait ? 152f : 54f) * scaleY;
+        float cardX       = cardMarginX;
+        float cardY       = cardMarginY;
+        float cardW       = width  - 2f * cardMarginX;
+        float cardH       = height - 2f * cardMarginY;
+        float cardRadius  = 40f * scale;
+
+        float innerPad = 32f * scale;
+        float contentX = cardX + innerPad;
+        float contentW = cardW - 2f * innerPad;
+        float innerPadY = cardY + innerPad + 20f * scaleY;
+
+        return new WallpaperLayout(
+            IsPortrait: isPortrait,
+            Cx:         cx,
+            Fs:         fs,
+            ScaleX:     scaleX,
+            ScaleY:     scaleY,
+            Scale:      scale,
+            CardX:      cardX,
+            CardY:      cardY,
+            CardW:      cardW,
+            CardH:      cardH,
+            CardRadius: cardRadius,
+            ContentX:   contentX,
+            ContentW:   contentW,
+            InnerPadY:  innerPadY);
+    }
+
     public static byte[] GeneratePng(WallpaperData data, int width = DefaultWidth, int height = DefaultHeight)
     {
         var info = new SKImageInfo(width, height, SKColorType.Rgba8888, SKAlphaType.Premul);
@@ -32,7 +91,52 @@ public static class WallpaperGenerator
 
         DrawBackground(canvas, data.BackgroundImageBytes, width, height);
         DrawOverlay(canvas, width, height);
-        DrawContent(canvas, data, width, height);
+        var countdownY = DrawStaticContent(canvas, data, width, height);
+        DrawDynamicContent(canvas, data, width, height, countdownY);
+
+        using var image   = surface.Snapshot();
+        using var encoded = image.Encode(SKEncodedImageFormat.Png, 95);
+        return encoded.ToArray();
+    }
+
+    /// <summary>
+    /// Renders only the background, overlay, card, title, and photo — everything
+    /// except the countdown numbers that change every second.  Store the returned bytes
+    /// and pass them to <see cref="UpdateCountdownPng"/> on each tick so the expensive
+    /// background decode and photo composite only happens once per slideshow image change.
+    /// </summary>
+    public static byte[] GenerateBackground(WallpaperData data, int width = DefaultWidth, int height = DefaultHeight)
+    {
+        var info = new SKImageInfo(width, height, SKColorType.Rgba8888, SKAlphaType.Premul);
+        using var surface = SKSurface.Create(info);
+        var canvas = surface.Canvas;
+
+        DrawBackground(canvas, data.BackgroundImageBytes, width, height);
+        DrawOverlay(canvas, width, height);
+        DrawStaticContent(canvas, data, width, height);
+
+        using var image   = surface.Snapshot();
+        using var encoded = image.Encode(SKEncodedImageFormat.Png, 95);
+        return encoded.ToArray();
+    }
+
+    /// <summary>
+    /// Composites fresh countdown numbers on top of a pre-rendered background PNG
+    /// produced by <see cref="GenerateBackground"/>.  This avoids re-decoding the
+    /// background image and re-drawing the static card content on every tick.
+    /// </summary>
+    public static byte[] UpdateCountdownPng(byte[] backgroundPng, WallpaperData data, int width = DefaultWidth, int height = DefaultHeight)
+    {
+        var info = new SKImageInfo(width, height, SKColorType.Rgba8888, SKAlphaType.Premul);
+        using var surface = SKSurface.Create(info);
+        var canvas = surface.Canvas;
+
+        using var bgBitmap = SKBitmap.Decode(backgroundPng);
+        if (bgBitmap != null)
+            canvas.DrawBitmap(bgBitmap, 0, 0);
+
+        var countdownY = ComputeCountdownY(data, width, height);
+        DrawDynamicContent(canvas, data, width, height, countdownY);
 
         using var image   = surface.Snapshot();
         using var encoded = image.Encode(SKEncodedImageFormat.Png, 95);
@@ -102,80 +206,93 @@ public static class WallpaperGenerator
 
     // ─── Content ───────────────────────────────────────────────────────────────
 
-    private static void DrawContent(SKCanvas canvas, WallpaperData data, int width, int height)
+    /// <summary>
+    /// Draws the static portions of the wallpaper (card, title, photo) and returns
+    /// the Y coordinate at which the dynamic countdown content should begin.
+    /// </summary>
+    private static float DrawStaticContent(SKCanvas canvas, WallpaperData data, int width, int height)
     {
-        bool  isPortrait = height > width;
-        float cx         = width / 2f;
+        var L = ComputeLayout(width, height);
 
-        // Font scale: constrained by the narrower dimension ratio, with an extra
-        // multiplier in portrait so text stays legible on phone-sized screens.
-        float fsRaw = Math.Min((float)width / DefaultWidth, (float)height / DefaultHeight);
-        float fs    = isPortrait ? fsRaw * PortraitFontScale : fsRaw;
+        DrawCard(canvas, L.CardX, L.CardY, L.CardW, L.CardH, L.CardRadius);
 
-        // Layout scale relative to the 1920×1080 reference layout.
-        float scaleX = (float)width  / DefaultWidth;
-        float scaleY = (float)height / DefaultHeight;
-        float scale  = Math.Min(scaleX, scaleY);
-
-        // ─── Glassmorphism card ──────────────────────────────────────────────
-        float cardMarginX = (isPortrait ? 54f : 200f) * scaleX;
-        float cardMarginY = (isPortrait ? 152f : 54f) * scaleY;
-        float cardX       = cardMarginX;
-        float cardY       = cardMarginY;
-        float cardW       = width  - 2f * cardMarginX;
-        float cardH       = height - 2f * cardMarginY;
-        float cardRadius  = 40f * scale;
-
-        DrawCard(canvas, cardX, cardY, cardW, cardH, cardRadius);
-
-        // ─── Layout inside card ──────────────────────────────────────────────
-        float innerPad = 32f * scale;
-        float contentX = cardX + innerPad;
-        float contentW = cardW - 2f * innerPad;
-        float y        = cardY + innerPad + 20f * scaleY;
+        float y = L.InnerPadY;
 
         // Title: "Countdown to {date}"
         string title     = $"Countdown to {data.TargetDate.ToString("MMMM d, yyyy", data.Culture)}";
-        float  titleSize = 68f * fs;
-        DrawCenteredText(canvas, title, cx, y + titleSize, titleSize, SKColors.White, bold: true);
-        y += titleSize * 1.2f + 20f * scaleY;
+        float  titleSize = 68f * L.Fs;
+        DrawCenteredText(canvas, title, L.Cx, y + titleSize, titleSize, SKColors.White, bold: true);
+        y += titleSize * 1.2f + 20f * L.ScaleY;
 
         // Photo inside card (cover-fit, rounded corners)
         if (data.BackgroundImageBytes is { Length: > 0 })
         {
-            float imgH = isPortrait ? cardH * 0.38f : cardH * 0.45f;
+            float imgH = L.IsPortrait ? L.CardH * 0.38f : L.CardH * 0.45f;
             DrawRoundedPhoto(canvas, data.BackgroundImageBytes,
-                contentX, y, contentW, imgH, 20f * scale);
-            y += imgH + 30f * scaleY;
+                L.ContentX, y, L.ContentW, imgH, 20f * L.Scale);
+            y += imgH + 30f * L.ScaleY;
         }
 
+        return y;
+    }
+
+    /// <summary>
+    /// Computes the Y coordinate where the dynamic countdown content begins.
+    /// Uses the same layout logic as <see cref="DrawStaticContent"/> but without
+    /// touching the canvas.  Use this when compositing onto a cached background.
+    /// </summary>
+    private static float ComputeCountdownY(WallpaperData data, int width, int height)
+    {
+        var L = ComputeLayout(width, height);
+
+        float y         = L.InnerPadY;
+        float titleSize = 68f * L.Fs;
+        y += titleSize * 1.2f + 20f * L.ScaleY;
+
+        if (data.BackgroundImageBytes is { Length: > 0 })
+        {
+            float imgH = L.IsPortrait ? L.CardH * 0.38f : L.CardH * 0.45f;
+            y += imgH + 30f * L.ScaleY;
+        }
+
+        return y;
+    }
+
+    /// <summary>
+    /// Draws the dynamic countdown content (numbers, breakdown, target date) starting
+    /// at <paramref name="y"/>.
+    /// </summary>
+    private static void DrawDynamicContent(SKCanvas canvas, WallpaperData data, int width, int height, float y)
+    {
+        var L = ComputeLayout(width, height);
+
         // Countdown row: DAYS | HOURS | MINUTES | SECONDS
-        float numSize = (isPortrait ? 110f : 90f) * fs;
-        float lblSize = 28f * fs;
-        float colW    = contentW / 4f;
+        float numSize = (L.IsPortrait ? 110f : 90f) * L.Fs;
+        float lblSize = 28f * L.Fs;
+        float colW    = L.ContentW / 4f;
 
         string[] nums = { data.TotalDays.ToString(), data.Hours.ToString("D2"), data.Minutes.ToString("D2"), data.Seconds.ToString("D2") };
         string[] lbls = { "DAYS", "HOURS", "MINUTES", "SECONDS" };
 
         for (int i = 0; i < 4; i++)
         {
-            float colCx = contentX + colW * (i + 0.5f);
+            float colCx = L.ContentX + colW * (i + 0.5f);
             DrawCenteredText(canvas, nums[i], colCx, y + numSize, numSize, SKColors.White, bold: true);
-            DrawCenteredText(canvas, lbls[i], colCx, y + numSize + lblSize + 8f * scaleY, lblSize,
+            DrawCenteredText(canvas, lbls[i], colCx, y + numSize + lblSize + 8f * L.ScaleY, lblSize,
                 new SKColor(255, 255, 255, 204), bold: false);
         }
-        y += numSize + lblSize + 40f * scaleY;
+        y += numSize + lblSize + 40f * L.ScaleY;
 
         // Breakdown: "N Years, N Months, N Days"
-        float  brkSize       = 34f * fs;
+        float  brkSize       = 34f * L.Fs;
         string breakdownText = $"{data.Years} {Pluralise(data.Years, "Year")}, {data.Months} {Pluralise(data.Months, "Month")}, {data.Days} {Pluralise(data.Days, "Day")}";
-        DrawCenteredText(canvas, breakdownText, cx, y + brkSize, brkSize, new SKColor(255, 255, 255, 191), bold: false);
-        y += brkSize + 20f * scaleY;
+        DrawCenteredText(canvas, breakdownText, L.Cx, y + brkSize, brkSize, new SKColor(255, 255, 255, 191), bold: false);
+        y += brkSize + 20f * L.ScaleY;
 
         // Target date: "Target Date: October 1, 2028 at 12:00:00 AM"
-        float  tdSize          = 30f * fs;
+        float  tdSize          = 30f * L.Fs;
         string targetDateLabel = $"Target Date: {data.TargetDate.ToString("MMMM d, yyyy 'at' hh:mm:ss tt", data.Culture)}";
-        DrawCenteredText(canvas, targetDateLabel, cx, y + tdSize, tdSize,
+        DrawCenteredText(canvas, targetDateLabel, L.Cx, y + tdSize, tdSize,
             new SKColor(255, 255, 255, 230), bold: false);
     }
 

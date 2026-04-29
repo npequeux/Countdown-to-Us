@@ -84,6 +84,16 @@
                             <input type="checkbox" @bind="_autoWallpaper" @bind:after="OnAutoWallpaperChanged" />
                             @T("autoWallpaper")
                         </label>
+                        @if (_autoWallpaper)
+                        {
+                            <div style="display:flex;align-items:center;gap:0.5rem;">
+                                <label for="wallpaper-interval" style="font-weight:normal;">@T("wallpaperInterval")</label>
+                                <select id="wallpaper-interval" @bind="_wallpaperIntervalSeconds" @bind:after="OnWallpaperIntervalChanged">
+                                    <option value="60">@T("wallpaperIntervalMinute")</option>
+                                    <option value="1">@T("wallpaperIntervalSecond")</option>
+                                </select>
+                            </div>
+                        }
                         @if (!string.IsNullOrEmpty(_wallpaperStatus))
                         {
                             <span style="font-size:0.82rem;opacity:0.75;">@_wallpaperStatus</span>
@@ -135,7 +145,10 @@
             ["currentTime"] = "Current time",
             ["wallpaperLabel"] = "Desktop Wallpaper",
             ["setWallpaper"] = "Set as Wallpaper",
-            ["autoWallpaper"] = "Auto-update wallpaper (every second)",
+            ["autoWallpaper"] = "Auto-update wallpaper",
+            ["wallpaperInterval"] = "Refresh interval:",
+            ["wallpaperIntervalMinute"] = "Every minute (default)",
+            ["wallpaperIntervalSecond"] = "Every second",
             ["wallpaperSet"] = "✓ Wallpaper updated",
             ["wallpaperError"] = "Failed to set wallpaper",
             ["locale"] = "en-US"
@@ -160,7 +173,10 @@
             ["currentTime"] = "Heure actuelle",
             ["wallpaperLabel"] = "Fond d'écran",
             ["setWallpaper"] = "Définir comme fond d'écran",
-            ["autoWallpaper"] = "Mise à jour auto du fond d'écran (chaque seconde)",
+            ["autoWallpaper"] = "Mise à jour auto du fond d'écran",
+            ["wallpaperInterval"] = "Intervalle de rafraîchissement :",
+            ["wallpaperIntervalMinute"] = "Chaque minute (défaut)",
+            ["wallpaperIntervalSecond"] = "Chaque seconde",
             ["wallpaperSet"] = "✓ Fond d'écran mis à jour",
             ["wallpaperError"] = "Impossible de définir le fond d'écran",
             ["locale"] = "fr-FR"
@@ -185,7 +201,10 @@
             ["currentTime"] = "Hora actual",
             ["wallpaperLabel"] = "Fondo de escritorio",
             ["setWallpaper"] = "Establecer como fondo",
-            ["autoWallpaper"] = "Actualizar fondo automáticamente (cada segundo)",
+            ["autoWallpaper"] = "Actualizar fondo automáticamente",
+            ["wallpaperInterval"] = "Intervalo de actualización:",
+            ["wallpaperIntervalMinute"] = "Cada minuto (predeterminado)",
+            ["wallpaperIntervalSecond"] = "Cada segundo",
             ["wallpaperSet"] = "✓ Fondo actualizado",
             ["wallpaperError"] = "No se pudo establecer el fondo",
             ["locale"] = "es-ES"
@@ -210,7 +229,10 @@
             ["currentTime"] = "当前时间",
             ["wallpaperLabel"] = "桌面壁纸",
             ["setWallpaper"] = "设置为壁纸",
-            ["autoWallpaper"] = "自动更新壁纸（每秒）",
+            ["autoWallpaper"] = "自动更新壁纸",
+            ["wallpaperInterval"] = "刷新间隔：",
+            ["wallpaperIntervalMinute"] = "每分钟（默认）",
+            ["wallpaperIntervalSecond"] = "每秒",
             ["wallpaperSet"] = "✓ 壁纸已更新",
             ["wallpaperError"] = "设置壁纸失败",
             ["locale"] = "zh-CN"
@@ -268,7 +290,15 @@
     private bool _wallpaperBusy;
     private string _wallpaperStatus = string.Empty;
     private Timer? _wallpaperTimer;
+    private int _lastWallpaperMinute = -1;
     private int _lastWallpaperSeconds = -1;
+    private int _wallpaperIntervalSeconds = 60;
+
+    // Cached background PNG (static portions without countdown numbers).
+    // Invalidated whenever the displayed slideshow image changes.
+    private byte[]? _cachedWallpaperBackground;
+    private string _cachedWallpaperImageSrc = string.Empty;
+    private bool _cachedWallpaperHasImage;
 
     protected override async Task OnInitializedAsync()
     {
@@ -305,6 +335,9 @@
             if (autoWallStr == "true")
             {
                 _autoWallpaper = true;
+                var intervalStr = await JS.InvokeAsync<string?>("localStorage.getItem", "wallpaperIntervalSeconds");
+                if (int.TryParse(intervalStr, out var savedInterval) && (savedInterval == 1 || savedInterval == 60))
+                    _wallpaperIntervalSeconds = savedInterval;
                 StartWallpaperTimerIfNeeded();
             }
         }
@@ -400,6 +433,7 @@
     private async Task OnLanguageChanged()
     {
         _currentCulture = CreateCulture(_currentLang);
+        _cachedWallpaperBackground = null;
         await JS.InvokeVoidAsync("localStorage.setItem", "language", _currentLang);
         await JS.InvokeVoidAsync("setHtmlLang", T("locale").Split('-')[0]);
     }
@@ -433,6 +467,7 @@
 
         _targetDate = TargetDateInputValue;
         _targetDateStr = _targetDate.ToString("yyyy-MM-ddTHH:mm:ss");
+        _cachedWallpaperBackground = null;
         await JS.InvokeVoidAsync("localStorage.setItem", "targetDate", _targetDateStr);
         UpdateCountdown();
     }
@@ -462,6 +497,7 @@
             await JS.InvokeVoidAsync("alert", T("alertSkippedPhotos"));
 
         CurrentSlide = 0;
+        _cachedWallpaperBackground = null;
         StopSlideshowTimer();
         StartSlideshowTimerIfNeeded();
         await SaveSlideshowImages();
@@ -471,6 +507,7 @@
     {
         SlideshowImages.Clear();
         CurrentSlide = 0;
+        _cachedWallpaperBackground = null;
         StopSlideshowTimer();
         StartSlideshowTimerIfNeeded();
         await JS.InvokeVoidAsync("localStorage.removeItem", "slideshowImages");
@@ -517,6 +554,7 @@
     {
         var active = ActiveImages;
         CurrentSlide = (CurrentSlide - 1 + active.Count) % active.Count;
+        _cachedWallpaperBackground = null;
         StopSlideshowTimer();
         StartSlideshowTimerIfNeeded();
     }
@@ -525,6 +563,7 @@
     {
         var active = ActiveImages;
         CurrentSlide = (CurrentSlide + 1) % active.Count;
+        _cachedWallpaperBackground = null;
         StopSlideshowTimer();
         StartSlideshowTimerIfNeeded();
     }
@@ -539,10 +578,38 @@
         StateHasChanged();
         try
         {
-            var imageBytes = await GetCurrentImageBytes();
-            var data = BuildWallpaperData(imageBytes);
             var (wpWidth, wpHeight) = GetWallpaperDimensions();
-            var png = Services.WallpaperGenerator.GeneratePng(data, wpWidth, wpHeight);
+            var currentSrc = CurrentImageSrc;
+
+            // Invalidate the cached background whenever the slideshow image changes.
+            if (currentSrc != _cachedWallpaperImageSrc)
+            {
+                _cachedWallpaperBackground = null;
+                _cachedWallpaperImageSrc   = currentSrc;
+            }
+
+            byte[] png;
+            if (_cachedWallpaperBackground != null)
+            {
+                // Fast path: composite only the countdown numbers onto the cached background.
+                // Pass a non-null, non-empty placeholder for BackgroundImageBytes so
+                // ComputeCountdownY applies the same Y offset that was used when rendering
+                // the background (a real image makes the card taller).
+                var data = BuildWallpaperData(_cachedWallpaperHasImage ? new byte[] { 0 } : null);
+                png = Services.WallpaperGenerator.UpdateCountdownPng(
+                    _cachedWallpaperBackground, data, wpWidth, wpHeight);
+            }
+            else
+            {
+                // Full render: decode background image, draw card/title/photo, then countdown.
+                var imageBytes = await GetCurrentImageBytes();
+                _cachedWallpaperHasImage = imageBytes is { Length: > 0 };
+                var data = BuildWallpaperData(imageBytes);
+                _cachedWallpaperBackground = Services.WallpaperGenerator.GenerateBackground(data, wpWidth, wpHeight);
+                png = Services.WallpaperGenerator.UpdateCountdownPng(
+                    _cachedWallpaperBackground, data, wpWidth, wpHeight);
+            }
+
             await WallpaperService.SetWallpaperAsync(png);
             _wallpaperStatus = T("wallpaperSet");
         }
@@ -568,9 +635,19 @@
             StopWallpaperTimer();
     }
 
+    private async Task OnWallpaperIntervalChanged()
+    {
+        await JS.InvokeVoidAsync("localStorage.setItem", "wallpaperIntervalSeconds", _wallpaperIntervalSeconds.ToString());
+        // Restart the timer with the new interval.
+        StopWallpaperTimer();
+        if (_autoWallpaper)
+            StartWallpaperTimerIfNeeded();
+    }
+
     private void StartWallpaperTimerIfNeeded()
     {
         if (_wallpaperTimer != null) return;
+        // Use a 1-second base tick and throttle in the handler according to the chosen interval.
         _wallpaperTimer = new Timer(1_000);
         _wallpaperTimer.Elapsed += OnWallpaperTick;
         _wallpaperTimer.AutoReset = true;
@@ -586,10 +663,20 @@
 
     private void OnWallpaperTick(object? sender, ElapsedEventArgs e)
     {
-        // Only regenerate the wallpaper when the seconds value has changed to avoid
-        // redundant PNG generation and system wallpaper API calls within the same second.
-        if (Seconds == _lastWallpaperSeconds) return;
-        _lastWallpaperSeconds = Seconds;
+        if (_wallpaperIntervalSeconds >= 60)
+        {
+            // Minute-level granularity: only update when the minute changes.
+            var currentMinute = DateTime.Now.Minute;
+            if (currentMinute == _lastWallpaperMinute) return;
+            _lastWallpaperMinute = currentMinute;
+        }
+        else
+        {
+            // Second-level granularity: only update when the seconds value changes to
+            // avoid redundant calls within the same second.
+            if (Seconds == _lastWallpaperSeconds) return;
+            _lastWallpaperSeconds = Seconds;
+        }
         InvokeAsync(SetWallpaperNow);
     }
 
