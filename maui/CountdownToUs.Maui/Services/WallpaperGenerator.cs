@@ -100,10 +100,10 @@ public static class WallpaperGenerator
     }
 
     /// <summary>
-    /// Renders only the background, overlay, card, title, and photo — everything
-    /// except the countdown numbers that change every second.  Store the returned bytes
-    /// and pass them to <see cref="UpdateCountdownPng"/> on each tick so the expensive
-    /// background decode and photo composite only happens once per slideshow image change.
+    /// Renders the background, overlay, and card — everything except the countdown
+    /// numbers that change every hour.  Store the returned bytes and pass them to
+    /// <see cref="UpdateCountdownPng"/> on each tick so the expensive background
+    /// decode only happens once per slideshow image change.
     /// </summary>
     public static byte[] GenerateBackground(WallpaperData data, int width = DefaultWidth, int height = DefaultHeight)
     {
@@ -207,33 +207,14 @@ public static class WallpaperGenerator
     // ─── Content ───────────────────────────────────────────────────────────────
 
     /// <summary>
-    /// Draws the static portions of the wallpaper (card, title, photo) and returns
+    /// Draws the static portions of the wallpaper (card) and returns
     /// the Y coordinate at which the dynamic countdown content should begin.
     /// </summary>
     private static float DrawStaticContent(SKCanvas canvas, WallpaperData data, int width, int height)
     {
         var L = ComputeLayout(width, height);
-
         DrawCard(canvas, L.CardX, L.CardY, L.CardW, L.CardH, L.CardRadius);
-
-        float y = L.InnerPadY;
-
-        // Title: "Countdown to {date}"
-        string title     = $"Countdown to {data.TargetDate.ToString("MMMM d, yyyy", data.Culture)}";
-        float  titleSize = 68f * L.Fs;
-        DrawCenteredText(canvas, title, L.Cx, y + titleSize, titleSize, SKColors.White, bold: true);
-        y += titleSize * 1.2f + 20f * L.ScaleY;
-
-        // Photo inside card (cover-fit, rounded corners)
-        if (data.BackgroundImageBytes is { Length: > 0 })
-        {
-            float imgH = L.IsPortrait ? L.CardH * 0.38f : L.CardH * 0.45f;
-            DrawRoundedPhoto(canvas, data.BackgroundImageBytes,
-                L.ContentX, y, L.ContentW, imgH, 20f * L.Scale);
-            y += imgH + 30f * L.ScaleY;
-        }
-
-        return y;
+        return L.InnerPadY;
     }
 
     /// <summary>
@@ -244,35 +225,24 @@ public static class WallpaperGenerator
     private static float ComputeCountdownY(WallpaperData data, int width, int height)
     {
         var L = ComputeLayout(width, height);
-
-        float y         = L.InnerPadY;
-        float titleSize = 68f * L.Fs;
-        y += titleSize * 1.2f + 20f * L.ScaleY;
-
-        if (data.BackgroundImageBytes is { Length: > 0 })
-        {
-            float imgH = L.IsPortrait ? L.CardH * 0.38f : L.CardH * 0.45f;
-            y += imgH + 30f * L.ScaleY;
-        }
-
-        return y;
+        return L.InnerPadY;
     }
 
     /// <summary>
-    /// Draws the dynamic countdown content (numbers, breakdown, target date) starting
+    /// Draws the dynamic countdown content (years, months, days, hours) starting
     /// at <paramref name="y"/>.
     /// </summary>
     private static void DrawDynamicContent(SKCanvas canvas, WallpaperData data, int width, int height, float y)
     {
         var L = ComputeLayout(width, height);
 
-        // Countdown row: DAYS | HOURS | MINUTES | SECONDS
+        // Countdown row: YEARS | MONTHS | DAYS | HOURS
         float numSize = (L.IsPortrait ? 110f : 90f) * L.Fs;
         float lblSize = 28f * L.Fs;
         float colW    = L.ContentW / 4f;
 
-        string[] nums = { data.TotalDays.ToString(), data.Hours.ToString("D2"), data.Minutes.ToString("D2"), data.Seconds.ToString("D2") };
-        string[] lbls = { "DAYS", "HOURS", "MINUTES", "SECONDS" };
+        string[] nums = { data.Years.ToString(), data.Months.ToString(), data.Days.ToString(), data.Hours.ToString("D2") };
+        string[] lbls = { "YEARS", "MONTHS", "DAYS", "HOURS" };
 
         for (int i = 0; i < 4; i++)
         {
@@ -281,19 +251,6 @@ public static class WallpaperGenerator
             DrawCenteredText(canvas, lbls[i], colCx, y + numSize + lblSize + 8f * L.ScaleY, lblSize,
                 new SKColor(255, 255, 255, 204), bold: false);
         }
-        y += numSize + lblSize + 40f * L.ScaleY;
-
-        // Breakdown: "N Years, N Months, N Days"
-        float  brkSize       = 34f * L.Fs;
-        string breakdownText = $"{data.Years} {Pluralise(data.Years, "Year")}, {data.Months} {Pluralise(data.Months, "Month")}, {data.Days} {Pluralise(data.Days, "Day")}";
-        DrawCenteredText(canvas, breakdownText, L.Cx, y + brkSize, brkSize, new SKColor(255, 255, 255, 191), bold: false);
-        y += brkSize + 20f * L.ScaleY;
-
-        // Target date: "Target Date: October 1, 2028 at 12:00:00 AM"
-        float  tdSize          = 30f * L.Fs;
-        string targetDateLabel = $"Target Date: {data.TargetDate.ToString("MMMM d, yyyy 'at' hh:mm:ss tt", data.Culture)}";
-        DrawCenteredText(canvas, targetDateLabel, L.Cx, y + tdSize, tdSize,
-            new SKColor(255, 255, 255, 230), bold: false);
     }
 
     // ─── Card ───────────────────────────────────────────────────────────────────
@@ -324,31 +281,6 @@ public static class WallpaperGenerator
         canvas.DrawRoundRect(rrect, borderPaint);
     }
 
-    // ─── Rounded photo ───────────────────────────────────────────────────────────
-
-    private static void DrawRoundedPhoto(
-        SKCanvas canvas, byte[] imageBytes,
-        float x, float y, float w, float h, float radius)
-    {
-        try
-        {
-            using var bitmap = SKBitmap.Decode(imageBytes);
-            if (bitmap == null) return;
-
-            var rect  = new SKRect(x, y, x + w, y + h);
-            var rrect = new SKRoundRect(rect, radius);
-
-            canvas.Save();
-            canvas.ClipRoundRect(rrect, antialias: true);
-            DrawCoverFitBitmap(canvas, bitmap, x, y, w, h);
-            canvas.Restore();
-        }
-        catch
-        {
-            // Silently skip the photo if the bytes cannot be decoded.
-        }
-    }
-
     // ─── Helpers ────────────────────────────────────────────────────────────────
 
     private static void DrawCenteredText(
@@ -366,7 +298,4 @@ public static class WallpaperGenerator
         };
         canvas.DrawText(text, cx, y, SKTextAlign.Center, font, paint);
     }
-
-    private static string Pluralise(int value, string singular)
-        => value == 1 ? singular : singular + "s";
 }
