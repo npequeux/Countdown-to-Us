@@ -151,6 +151,8 @@
             ["wallpaperIntervalSecond"] = "Every second",
             ["wallpaperSet"] = "✓ Wallpaper updated",
             ["wallpaperError"] = "Failed to set wallpaper",
+            ["dateFormat"] = "MMMM d, yyyy",
+            ["dateTimeFormat"] = "MMMM d, yyyy 'at' HH:mm:ss",
             ["locale"] = "en-US"
         },
         ["fr"] = new()
@@ -179,6 +181,8 @@
             ["wallpaperIntervalSecond"] = "Chaque seconde",
             ["wallpaperSet"] = "✓ Fond d'écran mis à jour",
             ["wallpaperError"] = "Impossible de définir le fond d'écran",
+            ["dateFormat"] = "d MMMM yyyy",
+            ["dateTimeFormat"] = "d MMMM yyyy 'à' HH:mm:ss",
             ["locale"] = "fr-FR"
         },
         ["es"] = new()
@@ -207,6 +211,8 @@
             ["wallpaperIntervalSecond"] = "Cada segundo",
             ["wallpaperSet"] = "✓ Fondo actualizado",
             ["wallpaperError"] = "No se pudo establecer el fondo",
+            ["dateFormat"] = "d 'de' MMMM 'de' yyyy",
+            ["dateTimeFormat"] = "d 'de' MMMM 'de' yyyy 'a las' HH:mm:ss",
             ["locale"] = "es-ES"
         },
         ["zh"] = new()
@@ -235,6 +241,8 @@
             ["wallpaperIntervalSecond"] = "每秒",
             ["wallpaperSet"] = "✓ 壁纸已更新",
             ["wallpaperError"] = "设置壁纸失败",
+            ["dateFormat"] = "yyyy年M月d日",
+            ["dateTimeFormat"] = "yyyy年M月d日 HH:mm:ss",
             ["locale"] = "zh-CN"
         }
     };
@@ -270,8 +278,8 @@
     private int TotalDays { get; set; }
 
     // Display strings
-    private string CountdownTitle => $"{T("countdownTo")} {_targetDate.ToString("MMMM d, yyyy", _currentCulture)}";
-    private string TargetDateDisplay => $"{T("targetDatePrefix")} {_targetDate.ToString("MMMM d, yyyy 'at' hh:mm:ss tt", _currentCulture)}";
+    private string CountdownTitle => $"{T("countdownTo")} {_targetDate.ToString(T("dateFormat"), _currentCulture)}";
+    private string TargetDateDisplay => $"{T("targetDatePrefix")} {_targetDate.ToString(T("dateTimeFormat"), _currentCulture)}";
     private string DaysBreakdown => $"{Years} {T("years")}, {Months} {T("months")}, {Days} {T("days")}";
 
     // Slideshow
@@ -314,7 +322,7 @@
         // Load persisted target date
         var stored = await JS.InvokeAsync<string?>("localStorage.getItem", "targetDate");
         _targetDateStr = stored ?? DefaultTargetDate;
-        _targetDate = DateTime.Parse(_targetDateStr);
+        _targetDate = DateTime.Parse(_targetDateStr, System.Globalization.CultureInfo.InvariantCulture);
         TargetDateInputValue = _targetDate;
 
         // Load persisted slideshow images

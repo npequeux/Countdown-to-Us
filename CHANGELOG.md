@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- `DateTime.Parse` in `Home.razor` (Blazor and MAUI) now uses `CultureInfo.InvariantCulture` to prevent parsing failures on systems configured with non-English date separators.
+- Date and time display now uses locale-specific format strings (`dateFormat` / `dateTimeFormat` translation keys). Removes the hardcoded English `'at'` literal and the 12-hour AM/PM format for non-English languages. French, Spanish and Chinese now display dates in their natural order and connector words.
+- `LinuxWallpaperService` now uses `ProcessStartInfo.ArgumentList` instead of a raw `Arguments` string, which correctly handles any special characters in the wallpaper image path.
+- Removed the unused `HttpClient` service registration from the Blazor WebAssembly `Program.cs`.
+
 ## [v0.4] - Wallpaper Release
 
 ### Added
