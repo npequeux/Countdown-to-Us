@@ -17,7 +17,7 @@ namespace CountdownToUs.Maui;
 [MetaData("android.appwidget.provider", Resource = "@xml/countdown_widget_info")]
 public class CountdownWidgetProvider : AppWidgetProvider
 {
-    private const string UpdateAction = "com.countdown.tous.widget.UPDATE";
+    private const string UpdateAction = "com.countdown.us.widget.UPDATE";
     private const string TargetDisplayFormat = "yyyy-MM-dd HH:mm";
     private static readonly DateTime TargetDate = DateTime.Parse(
         Constants.AppDefaults.TargetDateIso,
