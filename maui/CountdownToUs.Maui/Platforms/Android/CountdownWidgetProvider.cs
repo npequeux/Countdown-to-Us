@@ -1,6 +1,7 @@
 using Android.App;
 using Android.Appwidget;
 using Android.Content;
+using Android.Graphics;
 using Android.Widget;
 using System.Globalization;
 
@@ -86,6 +87,26 @@ public class CountdownWidgetProvider : AppWidgetProvider
         views.SetTextViewText(Resource.Id.widget_seconds_value, remaining.Seconds.ToString("D2"));
         views.SetTextViewText(Resource.Id.widget_target_date, $"Target: {TargetDate.ToString(TargetDisplayFormat, CultureInfo.InvariantCulture)}");
 
+        // Show the saved photo thumbnail if available.
+        var photoPath = WidgetImageService.GetFilePath();
+        if (File.Exists(photoPath))
+        {
+            var bitmap = LoadScaledBitmap(photoPath);
+            if (bitmap != null)
+            {
+                views.SetImageViewBitmap(Resource.Id.widget_image, bitmap);
+                views.SetViewVisibility(Resource.Id.widget_image, Android.Views.ViewStates.Visible);
+            }
+            else
+            {
+                views.SetViewVisibility(Resource.Id.widget_image, Android.Views.ViewStates.Gone);
+            }
+        }
+        else
+        {
+            views.SetViewVisibility(Resource.Id.widget_image, Android.Views.ViewStates.Gone);
+        }
+
         var launchIntent = new Intent(context, typeof(MainActivity));
         launchIntent.SetFlags(ActivityFlags.NewTask | ActivityFlags.ClearTop);
 
@@ -97,6 +118,38 @@ public class CountdownWidgetProvider : AppWidgetProvider
 
         views.SetOnClickPendingIntent(Resource.Id.widget_root, launchPendingIntent);
         appWidgetManager.UpdateAppWidget(appWidgetId, views);
+    }
+
+    /// <summary>
+    /// Decodes the image at <paramref name="filePath"/> scaled down so that its
+    /// longest dimension does not exceed <paramref name="maxDimPx"/> pixels.
+    /// Returns null if the file cannot be decoded.
+    /// </summary>
+    private static Bitmap? LoadScaledBitmap(string filePath, int maxDimPx = 300)
+    {
+        try
+        {
+            // First pass: read only the image dimensions.
+            var sizeOpts = new BitmapFactory.Options { InJustDecodeBounds = true };
+            BitmapFactory.DecodeFile(filePath, sizeOpts);
+            if (sizeOpts.OutWidth <= 0 || sizeOpts.OutHeight <= 0)
+                return null;
+
+            // Compute the largest power-of-two sample size that keeps the image
+            // within maxDimPx on its longest side.
+            int sampleSize = 1;
+            int maxDim = Math.Max(sizeOpts.OutWidth, sizeOpts.OutHeight);
+            while (maxDim / (sampleSize * 2) > maxDimPx)
+                sampleSize *= 2;
+
+            // Second pass: decode at the computed sample size.
+            var opts = new BitmapFactory.Options { InSampleSize = sampleSize };
+            return BitmapFactory.DecodeFile(filePath, opts);
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     private static void ScheduleUpdates(Context context)
