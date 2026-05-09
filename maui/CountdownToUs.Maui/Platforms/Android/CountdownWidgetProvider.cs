@@ -74,17 +74,12 @@ public class CountdownWidgetProvider : AppWidgetProvider
     private static void UpdateWidget(Context context, AppWidgetManager appWidgetManager, int appWidgetId)
     {
         var now = DateTime.Now;
-        var remaining = TargetDate - now;
-        if (remaining < TimeSpan.Zero)
-        {
-            remaining = TimeSpan.Zero;
-        }
+        var (years, months, days) = GetRemainingYearsMonthsDays(now, TargetDate);
 
         var views = new RemoteViews(context.PackageName, Resource.Layout.countdown_widget);
-        views.SetTextViewText(Resource.Id.widget_days_value, ((int)remaining.TotalDays).ToString());
-        views.SetTextViewText(Resource.Id.widget_hours_value, remaining.Hours.ToString("D2"));
-        views.SetTextViewText(Resource.Id.widget_minutes_value, remaining.Minutes.ToString("D2"));
-        views.SetTextViewText(Resource.Id.widget_seconds_value, remaining.Seconds.ToString("D2"));
+        views.SetTextViewText(Resource.Id.widget_years_value, years.ToString());
+        views.SetTextViewText(Resource.Id.widget_months_value, months.ToString());
+        views.SetTextViewText(Resource.Id.widget_days_value, days.ToString());
         views.SetTextViewText(Resource.Id.widget_target_date, $"Target: {TargetDate.ToString(TargetDisplayFormat, CultureInfo.InvariantCulture)}");
 
         // Show the saved photo thumbnail if available.
@@ -118,6 +113,38 @@ public class CountdownWidgetProvider : AppWidgetProvider
 
         views.SetOnClickPendingIntent(Resource.Id.widget_root, launchPendingIntent);
         appWidgetManager.UpdateAppWidget(appWidgetId, views);
+    }
+
+    private static (int Years, int Months, int Days) GetRemainingYearsMonthsDays(DateTime now, DateTime targetDate)
+    {
+        var distance = targetDate - now;
+        if (distance <= TimeSpan.Zero)
+        {
+            return (0, 0, 0);
+        }
+
+        var startDate = now.Date;
+        var completeDays = (int)Math.Floor(distance.TotalDays);
+        var endDate = startDate.AddDays(completeDays);
+
+        int years = 0;
+        var cursor = startDate;
+        while (cursor.AddYears(1) <= endDate)
+        {
+            cursor = cursor.AddYears(1);
+            years++;
+        }
+
+        int months = 0;
+        while (cursor.AddMonths(1) <= endDate)
+        {
+            cursor = cursor.AddMonths(1);
+            months++;
+        }
+
+        int days = (endDate - cursor).Days;
+
+        return (years, months, days);
     }
 
     /// <summary>
