@@ -18,6 +18,7 @@ namespace CountdownToUs.Maui;
 public class CountdownWidgetProvider : AppWidgetProvider
 {
     private const string UpdateAction = "com.countdown.tous.widget.UPDATE";
+    private const string TargetDisplayFormat = "yyyy-MM-dd HH:mm";
     private static readonly DateTime TargetDate = DateTime.Parse(
         Constants.AppDefaults.TargetDateIso,
         CultureInfo.InvariantCulture);
@@ -83,7 +84,7 @@ public class CountdownWidgetProvider : AppWidgetProvider
         views.SetTextViewText(Resource.Id.widget_hours_value, remaining.Hours.ToString("D2"));
         views.SetTextViewText(Resource.Id.widget_minutes_value, remaining.Minutes.ToString("D2"));
         views.SetTextViewText(Resource.Id.widget_seconds_value, remaining.Seconds.ToString("D2"));
-        views.SetTextViewText(Resource.Id.widget_target_date, $"Target: {TargetDate:yyyy-MM-dd HH:mm}");
+        views.SetTextViewText(Resource.Id.widget_target_date, $"Target: {TargetDate.ToString(TargetDisplayFormat, CultureInfo.InvariantCulture)}");
 
         var launchIntent = new Intent(context, typeof(MainActivity));
         launchIntent.SetFlags(ActivityFlags.NewTask | ActivityFlags.ClearTop);
