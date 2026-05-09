@@ -124,29 +124,25 @@ public class CountdownWidgetProvider : AppWidgetProvider
         }
 
         var startDate = now.Date;
-        var endDate = targetDate.Date;
-        if (targetDate.TimeOfDay < now.TimeOfDay)
+        var completeDays = (int)Math.Floor(distance.TotalDays);
+        var endDate = startDate.AddDays(completeDays);
+
+        int years = 0;
+        var cursor = startDate;
+        while (cursor.AddYears(1) <= endDate)
         {
-            endDate = endDate.AddDays(-1);
+            cursor = cursor.AddYears(1);
+            years++;
         }
 
-        int years = endDate.Year - startDate.Year;
-        int months = endDate.Month - startDate.Month;
-        int days = endDate.Day - startDate.Day;
-
-        if (days < 0)
+        int months = 0;
+        while (cursor.AddMonths(1) <= endDate)
         {
-            months--;
-            int borrowYear = endDate.Month == 1 ? endDate.Year - 1 : endDate.Year;
-            int borrowMonth = endDate.Month == 1 ? 12 : endDate.Month - 1;
-            days += DateTime.DaysInMonth(borrowYear, borrowMonth);
+            cursor = cursor.AddMonths(1);
+            months++;
         }
 
-        if (months < 0)
-        {
-            years--;
-            months += 12;
-        }
+        int days = (endDate - cursor).Days;
 
         return (years, months, days);
     }
