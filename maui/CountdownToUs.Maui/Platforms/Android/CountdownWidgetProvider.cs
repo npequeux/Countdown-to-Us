@@ -1,0 +1,141 @@
+using Android.App;
+using Android.Appwidget;
+using Android.Content;
+using Android.Widget;
+
+namespace CountdownToUs.Maui;
+
+[BroadcastReceiver(Label = "Countdown 4x2 Widget", Enabled = true, Exported = true)]
+[IntentFilter(new[]
+{
+    AppWidgetManager.ActionAppwidgetUpdate,
+    Intent.ActionTimeChanged,
+    Intent.ActionTimezoneChanged,
+    UpdateAction
+})]
+[MetaData("android.appwidget.provider", Resource = "@xml/countdown_widget_info")]
+public class CountdownWidgetProvider : AppWidgetProvider
+{
+    private const string UpdateAction = "com.countdown.tous.widget.UPDATE";
+    private static readonly DateTime TargetDate = new(2028, 10, 1, 0, 0, 0, DateTimeKind.Local);
+
+    public override void OnEnabled(Context context)
+    {
+        base.OnEnabled(context);
+        ScheduleUpdates(context);
+    }
+
+    public override void OnDisabled(Context context)
+    {
+        base.OnDisabled(context);
+        CancelUpdates(context);
+    }
+
+    public override void OnUpdate(Context context, AppWidgetManager appWidgetManager, int[] appWidgetIds)
+    {
+        base.OnUpdate(context, appWidgetManager, appWidgetIds);
+        foreach (var appWidgetId in appWidgetIds)
+        {
+            UpdateWidget(context, appWidgetManager, appWidgetId);
+        }
+
+        ScheduleUpdates(context);
+    }
+
+    public override void OnReceive(Context context, Intent intent)
+    {
+        base.OnReceive(context, intent);
+
+        if (intent.Action is not (UpdateAction or AppWidgetManager.ActionAppwidgetUpdate or Intent.ActionTimeChanged or Intent.ActionTimezoneChanged))
+        {
+            return;
+        }
+
+        var appWidgetManager = AppWidgetManager.GetInstance(context);
+        var componentName = new ComponentName(context, Java.Lang.Class.FromType(typeof(CountdownWidgetProvider)));
+        var appWidgetIds = appWidgetManager.GetAppWidgetIds(componentName);
+
+        foreach (var appWidgetId in appWidgetIds)
+        {
+            UpdateWidget(context, appWidgetManager, appWidgetId);
+        }
+
+        if (appWidgetIds.Length > 0)
+        {
+            ScheduleUpdates(context);
+        }
+    }
+
+    private static void UpdateWidget(Context context, AppWidgetManager appWidgetManager, int appWidgetId)
+    {
+        var now = DateTime.Now;
+        var remaining = TargetDate - now;
+        if (remaining < TimeSpan.Zero)
+        {
+            remaining = TimeSpan.Zero;
+        }
+
+        var views = new RemoteViews(context.PackageName, Resource.Layout.countdown_widget);
+        views.SetTextViewText(Resource.Id.widget_days_value, ((int)remaining.TotalDays).ToString());
+        views.SetTextViewText(Resource.Id.widget_hours_value, remaining.Hours.ToString("D2"));
+        views.SetTextViewText(Resource.Id.widget_minutes_value, remaining.Minutes.ToString("D2"));
+        views.SetTextViewText(Resource.Id.widget_seconds_value, remaining.Seconds.ToString("D2"));
+        views.SetTextViewText(Resource.Id.widget_target_date, $"Target: {TargetDate:yyyy-MM-dd HH:mm}");
+
+        var launchIntent = new Intent(context, typeof(MainActivity));
+        launchIntent.SetFlags(ActivityFlags.NewTask | ActivityFlags.ClearTop);
+
+        var launchPendingIntent = PendingIntent.GetActivity(
+            context,
+            0,
+            launchIntent,
+            PendingIntentFlags.UpdateCurrent | PendingIntentFlags.Immutable);
+
+        views.SetOnClickPendingIntent(Resource.Id.widget_root, launchPendingIntent);
+        appWidgetManager.UpdateAppWidget(appWidgetId, views);
+    }
+
+    private static void ScheduleUpdates(Context context)
+    {
+        var alarmManager = (AlarmManager?)context.GetSystemService(Context.AlarmService);
+        if (alarmManager is null)
+        {
+            return;
+        }
+
+        var updateIntent = new Intent(context, typeof(CountdownWidgetProvider));
+        updateIntent.SetAction(UpdateAction);
+
+        var updatePendingIntent = PendingIntent.GetBroadcast(
+            context,
+            0,
+            updateIntent,
+            PendingIntentFlags.UpdateCurrent | PendingIntentFlags.Immutable);
+
+        alarmManager.SetInexactRepeating(
+            AlarmType.Rtc,
+            Java.Lang.JavaSystem.CurrentTimeMillis() + 60_000,
+            60_000,
+            updatePendingIntent);
+    }
+
+    private static void CancelUpdates(Context context)
+    {
+        var alarmManager = (AlarmManager?)context.GetSystemService(Context.AlarmService);
+        if (alarmManager is null)
+        {
+            return;
+        }
+
+        var updateIntent = new Intent(context, typeof(CountdownWidgetProvider));
+        updateIntent.SetAction(UpdateAction);
+
+        var updatePendingIntent = PendingIntent.GetBroadcast(
+            context,
+            0,
+            updateIntent,
+            PendingIntentFlags.UpdateCurrent | PendingIntentFlags.Immutable);
+
+        alarmManager.Cancel(updatePendingIntent);
+    }
+}
