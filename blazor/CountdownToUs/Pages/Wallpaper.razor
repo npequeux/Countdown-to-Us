@@ -24,6 +24,14 @@
         <span class="number">@Hours.ToString("D2")</span>
         <span class="label">@T("hours")</span>
     </div>
+    <div class="time-unit">
+        <span class="number">@Minutes.ToString("D2")</span>
+        <span class="label">@T("minutes")</span>
+    </div>
+    <div class="time-unit">
+        <span class="number">@Seconds.ToString("D2")</span>
+        <span class="label">@T("seconds")</span>
+    </div>
 </div>
 
 @code {
@@ -42,14 +50,14 @@
         "images/10.jpg"
     };
     private const int SlideshowIntervalMs = 5000;
-    private const int HourlyUpdateIntervalMs = 3_600_000;
+    private const int CountdownUpdateIntervalMs = 1_000;
 
     private static readonly Dictionary<string, Dictionary<string, string>> Translations = new()
     {
-        ["en"] = new() { ["years"] = "Years", ["months"] = "Months", ["days"] = "Days", ["hours"] = "Hours", ["locale"] = "en-US" },
-        ["fr"] = new() { ["years"] = "Ans", ["months"] = "Mois", ["days"] = "Jours", ["hours"] = "Heures", ["locale"] = "fr-FR" },
-        ["es"] = new() { ["years"] = "Años", ["months"] = "Meses", ["days"] = "Días", ["hours"] = "Horas", ["locale"] = "es-ES" },
-        ["zh"] = new() { ["years"] = "年", ["months"] = "月", ["days"] = "天", ["hours"] = "小时", ["locale"] = "zh-CN" }
+        ["en"] = new() { ["years"] = "Years", ["months"] = "Months", ["days"] = "Days", ["hours"] = "Hours", ["minutes"] = "Minutes", ["seconds"] = "Seconds", ["locale"] = "en-US" },
+        ["fr"] = new() { ["years"] = "Ans", ["months"] = "Mois", ["days"] = "Jours", ["hours"] = "Heures", ["minutes"] = "Minutes", ["seconds"] = "Secondes", ["locale"] = "fr-FR" },
+        ["es"] = new() { ["years"] = "Años", ["months"] = "Meses", ["days"] = "Días", ["hours"] = "Horas", ["minutes"] = "Minutos", ["seconds"] = "Segundos", ["locale"] = "es-ES" },
+        ["zh"] = new() { ["years"] = "年", ["months"] = "月", ["days"] = "天", ["hours"] = "小时", ["minutes"] = "分钟", ["seconds"] = "秒", ["locale"] = "zh-CN" }
     };
 
     private string _currentLang = "en";
@@ -63,13 +71,15 @@
     }
 
     private DateTime _targetDate;
-    private Timer? _hourlyTimer;
+    private Timer? _countdownTimer;
     private Timer? _slideshowTimer;
 
     private int Years { get; set; }
     private int Months { get; set; }
     private int Days { get; set; }
     private int Hours { get; set; }
+    private int Minutes { get; set; }
+    private int Seconds { get; set; }
 
     private List<string> _defaultImages = DefaultImages.OrderBy(_ => Random.Shared.Next()).ToList();
     private List<string> SlideshowImages { get; set; } = new();
@@ -100,10 +110,10 @@
 
         UpdateCountdown();
 
-        _hourlyTimer = new Timer(HourlyUpdateIntervalMs);
-        _hourlyTimer.Elapsed += OnHourlyTick;
-        _hourlyTimer.AutoReset = true;
-        _hourlyTimer.Start();
+        _countdownTimer = new Timer(CountdownUpdateIntervalMs);
+        _countdownTimer.Elapsed += OnCountdownTick;
+        _countdownTimer.AutoReset = true;
+        _countdownTimer.Start();
 
         if (ActiveImages.Count > 1)
         {
@@ -126,7 +136,7 @@
         }
     }
 
-    private void OnHourlyTick(object? sender, ElapsedEventArgs e)
+    private void OnCountdownTick(object? sender, ElapsedEventArgs e)
     {
         UpdateCountdown();
         InvokeAsync(StateHasChanged);
@@ -145,7 +155,7 @@
 
         if (distance <= TimeSpan.Zero)
         {
-            Years = Months = Days = Hours = 0;
+            Years = Months = Days = Hours = Minutes = Seconds = 0;
             return;
         }
 
@@ -173,14 +183,16 @@
         Months = months;
         Days = days;
         Hours = distance.Hours;
+        Minutes = distance.Minutes;
+        Seconds = distance.Seconds;
     }
 
     public async ValueTask DisposeAsync()
     {
-        if (_hourlyTimer != null)
+        if (_countdownTimer != null)
         {
-            _hourlyTimer.Stop();
-            _hourlyTimer.Dispose();
+            _countdownTimer.Stop();
+            _countdownTimer.Dispose();
         }
         if (_slideshowTimer != null)
         {
