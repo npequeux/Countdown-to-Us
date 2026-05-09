@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Android home-screen widget (4x2) for the MAUI app, with live Days/Hours/Minutes/Seconds countdown and tap-to-open behavior.
+
 ### Fixed
 - `DateTime.Parse` in `Home.razor` (Blazor and MAUI) now uses `CultureInfo.InvariantCulture` to prevent parsing failures on systems configured with non-English date separators.
 - Date and time display now uses locale-specific format strings (`dateFormat` / `dateTimeFormat` translation keys). Removes the hardcoded English `'at'` literal and the 12-hour AM/PM format for non-English languages. French, Spanish and Chinese now display dates in their natural order and connector words.
