@@ -74,15 +74,17 @@ public class CountdownWidgetProvider : AppWidgetProvider
     private static void UpdateWidget(Context context, AppWidgetManager appWidgetManager, int appWidgetId)
     {
         var now = DateTime.Now;
-        var (years, months, days) = GetRemainingYearsMonthsDays(now, TargetDate);
+        var (years, months, days, hours, minutes) = GetRemainingCountdown(now, TargetDate);
 
         var views = new RemoteViews(context.PackageName, Resource.Layout.countdown_widget);
         views.SetTextViewText(Resource.Id.widget_years_value, years.ToString());
         views.SetTextViewText(Resource.Id.widget_months_value, months.ToString());
         views.SetTextViewText(Resource.Id.widget_days_value, days.ToString());
+        views.SetTextViewText(Resource.Id.widget_hours_value, hours.ToString("D2"));
+        views.SetTextViewText(Resource.Id.widget_minutes_value, minutes.ToString("D2"));
         views.SetTextViewText(Resource.Id.widget_target_date, $"Target: {TargetDate.ToString(TargetDisplayFormat, CultureInfo.InvariantCulture)}");
 
-        // Show the saved photo thumbnail if available.
+        // Show the saved photo as a full-widget background if available.
         var photoPath = WidgetImageService.GetFilePath();
         if (File.Exists(photoPath))
         {
@@ -115,12 +117,12 @@ public class CountdownWidgetProvider : AppWidgetProvider
         appWidgetManager.UpdateAppWidget(appWidgetId, views);
     }
 
-    private static (int Years, int Months, int Days) GetRemainingYearsMonthsDays(DateTime now, DateTime targetDate)
+    private static (int Years, int Months, int Days, int Hours, int Minutes) GetRemainingCountdown(DateTime now, DateTime targetDate)
     {
         var distance = targetDate - now;
         if (distance <= TimeSpan.Zero)
         {
-            return (0, 0, 0);
+            return (0, 0, 0, 0, 0);
         }
 
         var startDate = now.Date;
@@ -144,7 +146,7 @@ public class CountdownWidgetProvider : AppWidgetProvider
 
         int days = (endDate - cursor).Days;
 
-        return (years, months, days);
+        return (years, months, days, distance.Hours, distance.Minutes);
     }
 
     /// <summary>
@@ -152,7 +154,7 @@ public class CountdownWidgetProvider : AppWidgetProvider
     /// longest dimension does not exceed <paramref name="maxDimPx"/> pixels.
     /// Returns null if the file cannot be decoded.
     /// </summary>
-    private static Bitmap? LoadScaledBitmap(string filePath, int maxDimPx = 300)
+    private static Bitmap? LoadScaledBitmap(string filePath, int maxDimPx = 1200)
     {
         try
         {
