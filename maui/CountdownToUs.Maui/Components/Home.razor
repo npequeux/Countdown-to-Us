@@ -4,6 +4,7 @@
 @implements IAsyncDisposable
 @inject IJSRuntime JS
 @inject CountdownToUs.Maui.Services.IWallpaperService WallpaperService
+@inject CountdownToUs.Maui.Services.IWidgetImageService WidgetImageService
 
 <PageTitle>Countdown to Us</PageTitle>
 
@@ -512,6 +513,7 @@
         StopSlideshowTimer();
         StartSlideshowTimerIfNeeded();
         await SaveSlideshowImages();
+        await SaveWidgetImageAsync();
     }
 
     private async Task ClearPhotos()
@@ -522,6 +524,7 @@
         StopSlideshowTimer();
         StartSlideshowTimerIfNeeded();
         await JS.InvokeVoidAsync("localStorage.removeItem", "slideshowImages");
+        await WidgetImageService.ClearImageAsync();
     }
 
     private async Task SaveSlideshowImages()
@@ -557,26 +560,46 @@
 
     private void OnSlideshowTick(object? sender, ElapsedEventArgs e)
     {
-        CurrentSlide = (CurrentSlide + 1) % ActiveImages.Count;
-        InvokeAsync(StateHasChanged);
+        var next = (CurrentSlide + 1) % ActiveImages.Count;
+        InvokeAsync(() => ChangeSlideAsync(next));
     }
 
-    private void PrevSlide()
+    private Task PrevSlide()
     {
         var active = ActiveImages;
-        CurrentSlide = (CurrentSlide - 1 + active.Count) % active.Count;
+        return ChangeSlideAsync((CurrentSlide - 1 + active.Count) % active.Count);
+    }
+
+    private Task NextSlide()
+    {
+        var active = ActiveImages;
+        return ChangeSlideAsync((CurrentSlide + 1) % active.Count);
+    }
+
+    private async Task ChangeSlideAsync(int newIndex)
+    {
+        CurrentSlide = newIndex;
         _cachedWallpaperBackground = null;
         StopSlideshowTimer();
         StartSlideshowTimerIfNeeded();
+        await SaveWidgetImageAsync();
+        StateHasChanged();
     }
 
-    private void NextSlide()
+    // ─── Widget image ─────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Persists the currently displayed image so the Android home-screen widget
+    /// can show it.  When the active image cannot be loaded the widget image is
+    /// cleared so the widget gracefully shows no photo.
+    /// </summary>
+    private async Task SaveWidgetImageAsync()
     {
-        var active = ActiveImages;
-        CurrentSlide = (CurrentSlide + 1) % active.Count;
-        _cachedWallpaperBackground = null;
-        StopSlideshowTimer();
-        StartSlideshowTimerIfNeeded();
+        var bytes = await GetCurrentImageBytes();
+        if (bytes is { Length: > 0 })
+            await WidgetImageService.SaveImageAsync(bytes);
+        else
+            await WidgetImageService.ClearImageAsync();
     }
 
     // ─── Wallpaper ────────────────────────────────────────────────────────────
