@@ -2,6 +2,7 @@ using Android.App;
 using Android.Appwidget;
 using Android.Content;
 using Android.Widget;
+using System.Globalization;
 
 namespace CountdownToUs.Maui;
 
@@ -17,7 +18,9 @@ namespace CountdownToUs.Maui;
 public class CountdownWidgetProvider : AppWidgetProvider
 {
     private const string UpdateAction = "com.countdown.tous.widget.UPDATE";
-    private static readonly DateTime TargetDate = new(2028, 10, 1, 0, 0, 0, DateTimeKind.Local);
+    private static readonly DateTime TargetDate = DateTime.Parse(
+        Constants.AppDefaults.TargetDateIso,
+        CultureInfo.InvariantCulture);
 
     public override void OnEnabled(Context context)
     {
