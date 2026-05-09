@@ -362,6 +362,8 @@
 
         // Start slideshow timer if needed
         StartSlideshowTimerIfNeeded();
+
+        await SaveWidgetImageAsync();
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
