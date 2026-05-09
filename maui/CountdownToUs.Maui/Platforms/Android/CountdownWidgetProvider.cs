@@ -124,7 +124,11 @@ public class CountdownWidgetProvider : AppWidgetProvider
         }
 
         var startDate = now.Date;
-        var endDate = startDate.AddDays(distance.Days);
+        var endDate = targetDate.Date;
+        if (targetDate.TimeOfDay < now.TimeOfDay)
+        {
+            endDate = endDate.AddDays(-1);
+        }
 
         int years = endDate.Year - startDate.Year;
         int months = endDate.Month - startDate.Month;
