@@ -5,7 +5,7 @@
 [![Latest Release](https://img.shields.io/github/v/release/npequeux/Countdown-to-Us?filter=v*&label=latest%20release&color=blue)](https://github.com/npequeux/Countdown-to-Us/releases/latest)
 [![Latest Private Release](https://img.shields.io/github/v/release/npequeux/Countdown-to-Us?filter=private-v*&label=latest%20private%20release&color=blueviolet)](https://github.com/npequeux/Countdown-to-Us/releases?q=private-v&expanded=true)
 
-A beautiful countdown timer displaying the time remaining until October 1, 2028. Built entirely in C# with .NET 10, available as:
+A beautiful countdown timer displaying the time remaining until January 1, 2028. Built entirely in C# with .NET 10, available as:
 
 - A **web application** (Blazor WebAssembly — runs in any browser, including on Linux)
 - A native **Android app** (.NET MAUI)
@@ -256,7 +256,7 @@ This project follows [Semantic Versioning](https://semver.org/). When updating t
 
 ## Target Date
 
-The countdown is set to October 1, 2028 at 00:00:00 (midnight).
+The countdown is set to January 1, 2028 at 00:00:00 (midnight).
 
 ## License
 
