@@ -66,7 +66,7 @@
                 <div class="settings-group">
                     <label for="target-date-input">@T("targetDateLabel")</label>
                     <input type="datetime-local" id="target-date-input"
-                           @bind="TargetDateInputValue" @bind:format="yyyy-MM-ddTHH:mm" />
+                           @bind="TargetDateInputValue" />
                     <button class="btn" @onclick="ApplyDate">@T("apply")</button>
                 </div>
                 <div class="settings-group">
@@ -292,7 +292,8 @@
 
     // Settings panel
     private bool SettingsPanelOpen { get; set; }
-    private DateTime TargetDateInputValue { get; set; }
+    private const string TargetDateInputFormat = "yyyy-MM-ddTHH:mm";
+    private string TargetDateInputValue { get; set; } = string.Empty;
 
     // Wallpaper
     private bool _autoWallpaper;
@@ -324,7 +325,7 @@
         var stored = await JS.InvokeAsync<string?>("localStorage.getItem", "targetDate");
         _targetDateStr = stored ?? DefaultTargetDate;
         _targetDate = DateTime.Parse(_targetDateStr, System.Globalization.CultureInfo.InvariantCulture);
-        TargetDateInputValue = _targetDate;
+        TargetDateInputValue = _targetDate.ToString(TargetDateInputFormat, System.Globalization.CultureInfo.InvariantCulture);
 
         // Load persisted slideshow images
         var imagesJson = await JS.InvokeAsync<string?>("localStorage.getItem", "slideshowImages");
@@ -468,18 +469,24 @@
 
     private async Task ApplyDate()
     {
-        if (TargetDateInputValue == default)
+        if (!DateTime.TryParseExact(
+                TargetDateInputValue,
+                TargetDateInputFormat,
+                System.Globalization.CultureInfo.InvariantCulture,
+                System.Globalization.DateTimeStyles.None,
+                out var parsedTargetDate))
         {
             await JS.InvokeVoidAsync("alert", T("alertSelectDate"));
             return;
         }
-        if (TargetDateInputValue <= DateTime.Now)
+        if (parsedTargetDate <= DateTime.Now)
         {
             var ok = await JS.InvokeAsync<bool>("confirm", T("confirmPastDate"));
             if (!ok) return;
         }
 
-        _targetDate = TargetDateInputValue;
+        _targetDate = parsedTargetDate;
+        TargetDateInputValue = _targetDate.ToString(TargetDateInputFormat, System.Globalization.CultureInfo.InvariantCulture);
         _targetDateStr = _targetDate.ToString("yyyy-MM-ddTHH:mm:ss");
         _cachedWallpaperBackground = null;
         await JS.InvokeVoidAsync("localStorage.setItem", "targetDate", _targetDateStr);
