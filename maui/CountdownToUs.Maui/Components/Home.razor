@@ -327,6 +327,7 @@
         _targetDateStr = stored ?? DefaultTargetDate;
         _targetDate = DateTime.Parse(_targetDateStr, System.Globalization.CultureInfo.InvariantCulture);
         TargetDateInputValue = _targetDate.ToString(TargetDateInputFormat, System.Globalization.CultureInfo.InvariantCulture);
+        await SyncWidgetTargetDateAsync();
 
         // Load persisted slideshow images
         var imagesJson = await JS.InvokeAsync<string?>("localStorage.getItem", "slideshowImages");
@@ -491,6 +492,7 @@
         _targetDateStr = _targetDate.ToString("yyyy-MM-ddTHH:mm:ss");
         _cachedWallpaperBackground = null;
         await JS.InvokeVoidAsync("localStorage.setItem", "targetDate", _targetDateStr);
+        await SyncWidgetTargetDateAsync();
         UpdateCountdown();
     }
 
@@ -498,6 +500,9 @@
     {
         TargetDateInputValue = e.Value?.ToString() ?? string.Empty;
     }
+
+    private Task SyncWidgetTargetDateAsync()
+        => Services.WidgetSettingsStore.SaveTargetDateAsync(_targetDate);
 
     private async Task HandlePhotoUpload(InputFileChangeEventArgs e)
     {

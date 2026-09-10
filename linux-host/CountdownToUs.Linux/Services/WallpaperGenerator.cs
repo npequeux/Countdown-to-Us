@@ -31,7 +31,8 @@ public record WallpaperConfig
 /// Renders a 1920×1080 countdown wallpaper PNG using SkiaSharp.
 /// The visual design matches the app's glassmorphism UI: a centred frosted-glass
 /// card over a blurred background, with the countdown units displayed in four
-/// columns (Days / Hours / Minutes / Seconds).
+/// columns (Years / Months / Days / Hours) so the rendered image stays accurate
+/// between wallpaper refreshes.
 /// </summary>
 public static class WallpaperGenerator
 {
@@ -224,26 +225,26 @@ public static class WallpaperGenerator
         // ── Countdown row ── (.countdown: 4 flex columns with gap)
         // Column centres spaced 275px apart (total spread = 3×275 = 825px, centred in 1200px card)
         const float ColSpacing = 275f;
-        float col1 = cx - 1.5f * ColSpacing;   // Days
-        float col2 = cx - 0.5f * ColSpacing;   // Hours
-        float col3 = cx + 0.5f * ColSpacing;   // Minutes
-        float col4 = cx + 1.5f * ColSpacing;   // Seconds
+        float col1 = cx - 1.5f * ColSpacing;   // Years
+        float col2 = cx - 0.5f * ColSpacing;   // Months
+        float col3 = cx + 0.5f * ColSpacing;   // Days
+        float col4 = cx + 1.5f * ColSpacing;   // Hours
 
         // Large numbers — .number { font-size: 4rem; font-weight: bold; text-shadow }
         const float NumSize = 110f;
-        DrawCenteredText(canvas, data.TotalDays.ToString(),        col1, y + NumSize, NumSize, SKColors.White, bold: true,  textShadow: true);
-        DrawCenteredText(canvas, data.Hours.ToString("D2"),        col2, y + NumSize, NumSize, SKColors.White, bold: true,  textShadow: true);
-        DrawCenteredText(canvas, data.Minutes.ToString("D2"),      col3, y + NumSize, NumSize, SKColors.White, bold: true,  textShadow: true);
-        DrawCenteredText(canvas, data.Seconds.ToString("D2"),      col4, y + NumSize, NumSize, SKColors.White, bold: true,  textShadow: true);
+        DrawCenteredText(canvas, data.Years.ToString(),            col1, y + NumSize, NumSize, SKColors.White, bold: true,  textShadow: true);
+        DrawCenteredText(canvas, data.Months.ToString(),           col2, y + NumSize, NumSize, SKColors.White, bold: true,  textShadow: true);
+        DrawCenteredText(canvas, data.Days.ToString(),             col3, y + NumSize, NumSize, SKColors.White, bold: true,  textShadow: true);
+        DrawCenteredText(canvas, data.Hours.ToString("D2"),        col4, y + NumSize, NumSize, SKColors.White, bold: true,  textShadow: true);
         y += NumSize + 16f;
 
         // Labels — .label { text-transform: uppercase; opacity: 0.8 }  → alpha 204
         const float LabelSize = 32f;
         var labelColor = new SKColor(255, 255, 255, 204);
-        DrawCenteredText(canvas, "DAYS",    col1, y + LabelSize, LabelSize, labelColor, bold: false);
-        DrawCenteredText(canvas, "HOURS",   col2, y + LabelSize, LabelSize, labelColor, bold: false);
-        DrawCenteredText(canvas, "MINUTES", col3, y + LabelSize, LabelSize, labelColor, bold: false);
-        DrawCenteredText(canvas, "SECONDS", col4, y + LabelSize, LabelSize, labelColor, bold: false);
+        DrawCenteredText(canvas, "YEARS",  col1, y + LabelSize, LabelSize, labelColor, bold: false);
+        DrawCenteredText(canvas, "MONTHS", col2, y + LabelSize, LabelSize, labelColor, bold: false);
+        DrawCenteredText(canvas, "DAYS",   col3, y + LabelSize, LabelSize, labelColor, bold: false);
+        DrawCenteredText(canvas, "HOURS",  col4, y + LabelSize, LabelSize, labelColor, bold: false);
         y += LabelSize + 40f;
 
         // Thin separator
