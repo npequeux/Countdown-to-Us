@@ -20,7 +20,7 @@ public class CountdownWidgetProvider : AppWidgetProvider
 {
     private const string UpdateAction = "com.countdown.us.widget.UPDATE";
     private const string TargetDisplayFormat = "yyyy-MM-dd HH:mm";
-    private static readonly DateTime TargetDate = DateTime.Parse(
+    private static readonly DateTime DefaultTargetDate = DateTime.Parse(
         Constants.AppDefaults.TargetDateIso,
         CultureInfo.InvariantCulture);
 
@@ -74,7 +74,8 @@ public class CountdownWidgetProvider : AppWidgetProvider
     private static void UpdateWidget(Context context, AppWidgetManager appWidgetManager, int appWidgetId)
     {
         var now = DateTime.Now;
-        var (years, months, days, hours, minutes) = GetRemainingCountdown(now, TargetDate);
+        var targetDate = Services.WidgetSettingsStore.GetTargetDate(DefaultTargetDate);
+        var (years, months, days, hours, minutes) = GetRemainingCountdown(now, targetDate);
 
         var views = new RemoteViews(context.PackageName, Resource.Layout.countdown_widget);
         views.SetTextViewText(Resource.Id.widget_years_value, years.ToString());
@@ -82,7 +83,7 @@ public class CountdownWidgetProvider : AppWidgetProvider
         views.SetTextViewText(Resource.Id.widget_days_value, days.ToString());
         views.SetTextViewText(Resource.Id.widget_hours_value, hours.ToString("D2"));
         views.SetTextViewText(Resource.Id.widget_minutes_value, minutes.ToString("D2"));
-        views.SetTextViewText(Resource.Id.widget_target_date, $"Target: {TargetDate.ToString(TargetDisplayFormat, CultureInfo.InvariantCulture)}");
+        views.SetTextViewText(Resource.Id.widget_target_date, $"Target: {targetDate.ToString(TargetDisplayFormat, CultureInfo.InvariantCulture)}");
 
         // Show the saved photo as a full-widget background if available.
         var photoPath = WidgetImageService.GetFilePath();
