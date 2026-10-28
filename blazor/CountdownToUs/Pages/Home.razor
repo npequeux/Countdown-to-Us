@@ -80,27 +80,24 @@
     @code {
         private string _targetDateStr = "2028-10-01";
         private string _targetDateStr2 = "2029-10-01";
-        private DateTime _targetDate => DateTime.Parse(_targetDateStr);
-        private DateTime _targetDate2 => DateTime.Parse(_targetDateStr2);
+        private DateTimeOffset _targetDate => DateTimeOffset.Parse(_targetDateStr);
+        private DateTimeOffset _targetDate2 => DateTimeOffset.Parse(_targetDateStr2);
 
         private int Years {
             get {
-                var span = _targetDate - DateTime.Now;
-                return span.Days / 365;
+                return (int)_targetDate.Subtract(DateTime.Now).TotalDays / 365.25;
             }
         }
 
         private int Months {
             get {
-                var span = _targetDate - DateTime.Now;
-                return (span.Days / 30) % 12;
+                return (_targetDate.Subtract(DateTime.Now).TotalDays / 365.25).ToString("0.").Split(".")[1].PadRight(2, '0').Substring(0, 2) != "00" ? (int)((_targetDate.Subtract(DateTime.Now).TotalDays / 365.25).ToString("0.").Split(".")[1].PadRight(2, '0').Substring(0, 2)) : 0;
             }
         }
 
         private int Days {
             get {
-                var span = _targetDate - DateTime.Now;
-                return span.Days % 30;
+                return (int)_targetDate.Subtract(DateTime.Now).TotalDays % 365;
             }
         }
 
@@ -113,19 +110,20 @@
 
         private int Minutes {
             get {
-                var span = _targetDate - DateTime.Now;
-                return (int)span.TotalMinutes % 60;
+                return (int)_targetDate.Subtract(DateTime.Now).TotalMinutes % 60;
             }
         }
 
         private int Seconds {
             get {
-                var span = _targetDate - DateTime.Now;
-                return (int)span.TotalSeconds % 60;
+                return (int)_targetDate.Subtract(DateTime.Now).TotalSeconds % 60;
             }
         }
 
         protected override async Task OnInitializedAsync() {
+            timer = new Timer(1000);
+            timer.Elapsed += (sender, e) => InvokeAsync(StateHasChanged);
+            timer.Start();
             await JS.InvokeVoidAsync("blazor.registerCountdownUpdate", "update-countdown", UpdateCountdown);
             await JS.InvokeVoidAsync("blazor.registerCountdownUpdate", "update-countdown2", UpdateCountdown2);
             await base.OnInitializedAsync();
@@ -139,7 +137,10 @@
             StateHasChanged();
         }
 
-        protected async ValueTask DisposeAsyncCore() {
+        protected async ValueTask DisposeAsyncCore()
+        {
+            timer?.Stop();
+            timer?.Dispose();
             await JS.InvokeVoidAsync("blazor.unregisterCountdownUpdate", "update-countdown");
             await JS.InvokeVoidAsync("blazor.unregisterCountdownUpdate", "update-countdown2");
         }
