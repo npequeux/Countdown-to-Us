@@ -1,4 +1,4 @@
-@page "/"
+@page ""
 @using System.Timers
 @using System.Linq
 @implements IAsyncDisposable
@@ -12,492 +12,135 @@
     <div class="image-container">
         <img src="@CurrentImageSrc" alt="Paradise island" class="us-image" />
         <div class="slideshow-controls" style="display:@(ActiveImages.Count > 1 ? "flex" : "none")">
-            <button class="slide-btn" @onclick="PrevSlide" aria-label="@T("prevImage")">&#8249;</button>
-            <span class="slide-indicator">@(CurrentSlide + 1) / @ActiveImages.Count</span>
-            <button class="slide-btn" @onclick="NextSlide" aria-label="@T("nextImage")">&#8250;</button>
+            <button class="slide-btn" @onclick="PrevSlide" aria-label="@T("Previous Slide")">\u2190</button>
+            <button class="slide-btn" @onclick="NextSlide" aria-label="@T("Next Slide")">\u2192</button>
         </div>
     </div>
 
-    <div class="countdown">
-        <div class="time-unit">
-            <span class="number" id="cnt-days">@TotalDays</span>
-            <span class="label">@T("days")</span>
-        </div>
-        <div class="time-unit">
-            <span class="number" id="cnt-hours">@Hours.ToString("D2")</span>
-            <span class="label">@T("hours")</span>
-        </div>
-        <div class="time-unit">
-            <span class="number" id="cnt-minutes">@Minutes.ToString("D2")</span>
-            <span class="label">@T("minutes")</span>
-        </div>
-        <div class="time-unit">
-            <span class="number" id="cnt-seconds">@Seconds.ToString("D2")</span>
-            <span class="label">@T("seconds")</span>
-        </div>
-    </div>
-
-    <div class="days-breakdown" id="cnt-breakdown">@DaysBreakdown</div>
-
-    <div class="target-date">@TargetDateDisplay</div>
-
-    <div class="settings-wrapper">
-        <button class="settings-toggle"
-                @onclick="ToggleSettings"
-                aria-expanded="@SettingsPanelOpen.ToString().ToLowerInvariant()"
-                aria-controls="settings-panel"
-                aria-label="@T("settings")">&#9881;</button>
-
-        @if (SettingsPanelOpen)
-        {
-            <div class="settings-panel" id="settings-panel">
-                <h2>@T("settings")</h2>
-                <div class="settings-group">
-                    <label for="language-select">@T("language")</label>
-                    <select id="language-select" @bind="_currentLang" @bind:after="OnLanguageChanged">
-                        <option value="en">English</option>
-                        <option value="fr">Français</option>
-                        <option value="es">Español</option>
-                        <option value="zh">中文</option>
-                    </select>
-                </div>
-                <div class="settings-group">
-                    <label for="target-date-input">@T("targetDateLabel")</label>
-                    <input type="datetime-local" id="target-date-input"
-                           @bind="TargetDateInputValue" @bind:format="yyyy-MM-ddTHH:mm" />
-                    <button class="btn" @onclick="ApplyDate">@T("apply")</button>
-                </div>
-                <div class="settings-group">
-                    <label for="photo-upload">@T("uploadPhotos")</label>
-                    <InputFile id="photo-upload" accept="image/*" multiple OnChange="HandlePhotoUpload" />
-                    <button class="btn btn-danger" @onclick="ClearPhotos">@T("clearPhotos")</button>
-                </div>
-                <div class="settings-group">
-                    <a class="btn" href="/wallpaper" target="_blank" rel="noopener">@T("wallpaperMode")</a>
-                </div>
-                <div class="settings-group">
-                    <a class="btn" href="/widget" target="_blank" rel="noopener">@T("widgetMode")</a>
-                </div>
+    <div class="countdown-container">
+        <h2>@CountdownTitle</h2>
+        <div class="countdown">
+            <div class="countdown-item">
+                <span class="countdown-value">@Years</span>
+                <span class="countdown-label">Years</span>
             </div>
-        }
+            <div class="countdown-item">
+                <span class="countdown-value">@Months</span>
+                <span class="countdown-label">Months</span>
+            </div>
+            <div class="countdown-item">
+                <span class="countdown-value">@Days</span>
+                <span class="countdown-label">Days</span>
+            </div>
+            <div class="countdown-item">
+                <span class="countdown-value">@Hours</span>
+                <span class="countdown-label">Hours</span>
+            </div>
+            <div class="countdown-item">
+                <span class="countdown-value">@Minutes</span>
+                <span class="countdown-label">Minutes</span>
+            </div>
+            <div class="countdown-item">
+                <span class="countdown-value">@Seconds</span>
+                <span class="countdown-label">Seconds</span>
+            </div>
+        </div>
     </div>
-</div>
 
-@code {
-    private const string DefaultTargetDate = "2028-01-01T00:00:00";
-    private static readonly string[] DefaultImages = new[]
-    {
-        "images/1.jpg",
-        "images/2.jpg",
-        "images/3.jpg",
-        "images/4.jpg",
-        "images/5.jpg",
-        "images/6.jpg",
-        "images/7.jpg",
-        "images/8.jpg",
-        "images/9.jpg",
-        "images/10.jpg"
-    };
-    private const int SlideshowIntervalMs = 5000;
+    <div class="countdown-container">
+        <h2>@CountdownTitle2</h2>
+        <div class="countdown">
+            <div class="countdown-item">
+                <span class="countdown-value">@Years2</span>
+                <span class="countdown-label">Years</span>
+            </div>
+            <div class="countdown-item">
+                <span class="countdown-value">@Months2</span>
+                <span class="countdown-label">Months</span>
+            </div>
+            <div class="countdown-item">
+                <span class="countdown-value">@Days2</span>
+                <span class="countdown-label">Days</span>
+            </div>
+            <div class="countdown-item">
+                <span class="countdown-value">@Hours2</span>
+                <span class="countdown-label">Hours</span>
+            </div>
+            <div class="countdown-item">
+                <span class="countdown-value">@Minutes2</span>
+                <span class="countdown-label">Minutes</span>
+            </div>
+            <div class="countdown-item">
+                <span class="countdown-value">@Seconds2</span>
+                <span class="countdown-label">Seconds</span>
+            </div>
+        </div>
+    </div>
 
-    // --- Translations ---
-    private static readonly Dictionary<string, Dictionary<string, string>> Translations = new()
-    {
-        ["en"] = new()
-        {
-            ["years"] = "Years", ["months"] = "Months", ["days"] = "Days", ["hours"] = "Hours", ["minutes"] = "Minutes", ["seconds"] = "Seconds",
-            ["settings"] = "Settings",
-            ["language"] = "Language",
-            ["targetDateLabel"] = "Target Date & Time",
-            ["apply"] = "Apply",
-            ["uploadPhotos"] = "Upload Photos (slideshow)",
-            ["clearPhotos"] = "Clear Photos",
-            ["targetDatePrefix"] = "Target Date:",
-            ["countdownTo"] = "Countdown to",
-            ["alertSelectDate"] = "Please select a date and time.",
-            ["confirmPastDate"] = "The selected date is in the past. The countdown will show all zeros. Continue?",
-            ["alertStorageError"] = "Could not save images: storage limit may be exceeded. Try using fewer or smaller images.",
-            ["alertSkippedPhotos"] = "Some photos could not be loaded and were skipped.",
-            ["prevImage"] = "Previous image",
-            ["nextImage"] = "Next image",
-            ["currentTime"] = "Current time",
-            ["wallpaperMode"] = "Wallpaper mode",
-            ["widgetMode"] = "Widget mode",
-            ["dateFormat"] = "MMMM d, yyyy",
-            ["dateTimeFormat"] = "MMMM d, yyyy 'at' HH:mm:ss",
-            ["locale"] = "en-US"
-        },
-        ["fr"] = new()
-        {
-            ["years"] = "Ans", ["months"] = "Mois", ["days"] = "Jours", ["hours"] = "Heures", ["minutes"] = "Minutes", ["seconds"] = "Secondes",
-            ["settings"] = "Paramètres",
-            ["language"] = "Langue",
-            ["targetDateLabel"] = "Date et heure cible",
-            ["apply"] = "Appliquer",
-            ["uploadPhotos"] = "Télécharger des photos (diaporama)",
-            ["clearPhotos"] = "Effacer les photos",
-            ["targetDatePrefix"] = "Date cible :",
-            ["countdownTo"] = "Compte à rebours jusqu'au",
-            ["alertSelectDate"] = "Veuillez sélectionner une date et une heure.",
-            ["confirmPastDate"] = "La date sélectionnée est dans le passé. Le compte à rebours affichera zéro. Continuer ?",
-            ["alertStorageError"] = "Impossible de sauvegarder les images : la limite de stockage est peut-être dépassée. Essayez avec moins d'images ou des images plus petites.",
-            ["alertSkippedPhotos"] = "Certaines photos n'ont pas pu être chargées et ont été ignorées.",
-            ["prevImage"] = "Image précédente",
-            ["nextImage"] = "Image suivante",
-            ["currentTime"] = "Heure actuelle",
-            ["wallpaperMode"] = "Mode fond d'écran",
-            ["widgetMode"] = "Mode widget",
-            ["dateFormat"] = "d MMMM yyyy",
-            ["dateTimeFormat"] = "d MMMM yyyy 'à' HH:mm:ss",
-            ["locale"] = "fr-FR"
-        },
-        ["es"] = new()
-        {
-            ["years"] = "Años", ["months"] = "Meses", ["days"] = "Días", ["hours"] = "Horas", ["minutes"] = "Minutos", ["seconds"] = "Segundos",
-            ["settings"] = "Configuración",
-            ["language"] = "Idioma",
-            ["targetDateLabel"] = "Fecha y hora objetivo",
-            ["apply"] = "Aplicar",
-            ["uploadPhotos"] = "Subir fotos (presentación)",
-            ["clearPhotos"] = "Borrar fotos",
-            ["targetDatePrefix"] = "Fecha objetivo:",
-            ["countdownTo"] = "Cuenta regresiva hasta el",
-            ["alertSelectDate"] = "Por favor selecciona una fecha y hora.",
-            ["confirmPastDate"] = "La fecha seleccionada está en el pasado. La cuenta regresiva mostrará ceros. ¿Continuar?",
-            ["alertStorageError"] = "No se pudieron guardar las imágenes: puede que se haya superado el límite de almacenamiento. Intenta con menos imágenes o imágenes más pequeñas.",
-            ["alertSkippedPhotos"] = "Algunas fotos no pudieron cargarse y fueron omitidas.",
-            ["prevImage"] = "Imagen anterior",
-            ["nextImage"] = "Imagen siguiente",
-            ["currentTime"] = "Hora actual",
-            ["wallpaperMode"] = "Modo fondo de pantalla",
-            ["widgetMode"] = "Modo widget",
-            ["dateFormat"] = "d 'de' MMMM 'de' yyyy",
-            ["dateTimeFormat"] = "d 'de' MMMM 'de' yyyy 'a las' HH:mm:ss",
-            ["locale"] = "es-ES"
-        },
-        ["zh"] = new()
-        {
-            ["years"] = "年", ["months"] = "月", ["days"] = "天", ["hours"] = "小时", ["minutes"] = "分钟", ["seconds"] = "秒",
-            ["settings"] = "设置",
-            ["language"] = "语言",
-            ["targetDateLabel"] = "目标日期和时间",
-            ["apply"] = "应用",
-            ["uploadPhotos"] = "上传照片（幻灯片）",
-            ["clearPhotos"] = "清除照片",
-            ["targetDatePrefix"] = "目标日期：",
-            ["countdownTo"] = "倒计时至",
-            ["alertSelectDate"] = "请选择日期和时间。",
-            ["confirmPastDate"] = "所选日期已过去，倒计时将显示零。是否继续？",
-            ["alertStorageError"] = "无法保存图片：可能超出了存储限制。请尝试使用更少或更小的图片。",
-            ["alertSkippedPhotos"] = "部分照片无法加载，已被跳过。",
-            ["prevImage"] = "上一张",
-            ["nextImage"] = "下一张",
-            ["currentTime"] = "当前时间",
-            ["wallpaperMode"] = "壁纸模式",
-            ["widgetMode"] = "小组件模式",
-            ["dateFormat"] = "yyyy年M月d日",
-            ["dateTimeFormat"] = "yyyy年M月d日 HH:mm:ss",
-            ["locale"] = "zh-CN"
-        }
-    };
+    @code {
+        private string _targetDateStr = "2028-10-01";
+        private string _targetDateStr2 = "2029-10-01";
+        private DateTime _targetDate => DateTime.Parse(_targetDateStr);
+        private DateTime _targetDate2 => DateTime.Parse(_targetDateStr2);
 
-    private string _currentLang = "en";
-    private System.Globalization.CultureInfo _currentCulture = System.Globalization.CultureInfo.CreateSpecificCulture("en-US");
-    private string _lastBackgroundUrl = string.Empty;
-    private string T(string key)
-    {
-        if (Translations.TryGetValue(_currentLang, out var dict) && dict.TryGetValue(key, out var val))
-            return val;
-        if (Translations.TryGetValue("en", out var enDict) && enDict.TryGetValue(key, out var fallback))
-            return fallback;
-        return key;
-    }
-
-    private string _targetDateStr = DefaultTargetDate;
-    private DateTime _targetDate;
-    private Timer? _countdownTimer;
-    private Timer? _slideshowTimer;
-
-    // Countdown values
-    private int Years { get; set; }
-    private int Months { get; set; }
-    private int Days { get; set; }
-    private int Hours { get; set; }
-    private int Minutes { get; set; }
-    private int Seconds { get; set; }
-    private int TotalDays { get; set; }
-
-    // Display strings
-    private string CountdownTitle => $"{T("countdownTo")} {_targetDate.ToString(T("dateFormat"), _currentCulture)}";
-    private string TargetDateDisplay => $"{T("targetDatePrefix")} {_targetDate.ToString(T("dateTimeFormat"), _currentCulture)}";
-    private string DaysBreakdown => $"{Years} {T("years")}, {Months} {T("months")}, {Days} {T("days")}";
-
-    // Slideshow
-    private List<string> _defaultImages = DefaultImages.OrderBy(_ => Random.Shared.Next()).ToList();
-    private List<string> SlideshowImages { get; set; } = new();
-    private int CurrentSlide { get; set; }
-    private List<string> ActiveImages => SlideshowImages.Count > 0 ? SlideshowImages : _defaultImages;
-    private string CurrentImageSrc => ActiveImages.Count > 0 ? ActiveImages[CurrentSlide] : string.Empty;
-
-    // Settings panel
-    private bool SettingsPanelOpen { get; set; }
-    private DateTime TargetDateInputValue { get; set; }
-
-    protected override async Task OnInitializedAsync()
-    {
-        // Load persisted language
-        var storedLang = await JS.InvokeAsync<string?>("localStorage.getItem", "language");
-        if (!string.IsNullOrEmpty(storedLang) && Translations.ContainsKey(storedLang))
-            _currentLang = storedLang;
-        _currentCulture = CreateCulture(_currentLang);
-
-        // Load persisted target date
-        var stored = await JS.InvokeAsync<string?>("localStorage.getItem", "targetDate");
-        _targetDateStr = stored ?? DefaultTargetDate;
-        _targetDate = DateTime.Parse(_targetDateStr, System.Globalization.CultureInfo.InvariantCulture);
-        TargetDateInputValue = _targetDate;
-
-        // Load persisted slideshow images
-        var imagesJson = await JS.InvokeAsync<string?>("localStorage.getItem", "slideshowImages");
-        if (!string.IsNullOrEmpty(imagesJson))
-        {
-            try
-            {
-                var images = System.Text.Json.JsonSerializer.Deserialize<List<string>>(imagesJson);
-                if (images != null) SlideshowImages = images;
-            }
-            catch { /* ignore corrupt data */ }
-        }
-
-        UpdateCountdown();
-
-        // Start 1-second countdown timer
-        _countdownTimer = new Timer(1000);
-        _countdownTimer.Elapsed += OnCountdownTick;
-        _countdownTimer.AutoReset = true;
-        _countdownTimer.Start();
-
-        // Start slideshow timer if needed
-        StartSlideshowTimerIfNeeded();
-    }
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender)
-            await JS.InvokeVoidAsync("setHtmlLang", T("locale").Split('-')[0]);
-        var url = CurrentImageSrc;
-        if (!string.IsNullOrEmpty(url) && url != _lastBackgroundUrl)
-        {
-            _lastBackgroundUrl = url;
-            await JS.InvokeVoidAsync("setBodyBackground", url);
-        }
-    }
-
-    private void OnCountdownTick(object? sender, ElapsedEventArgs e)
-    {
-        UpdateCountdown();
-        InvokeAsync(UpdateCountdownDisplayAsync);
-    }
-
-    private async Task UpdateCountdownDisplayAsync()
-    {
-        await JS.InvokeVoidAsync("updateCountdownDisplay",
-            TotalDays.ToString(),
-            Hours.ToString("D2"),
-            Minutes.ToString("D2"),
-            Seconds.ToString("D2"),
-            DaysBreakdown);
-    }
-
-    private void UpdateCountdown()
-    {
-        var now = DateTime.Now;
-        var distance = _targetDate - now;
-
-        if (distance <= TimeSpan.Zero)
-        {
-            Years = Months = Days = Hours = Minutes = Seconds = TotalDays = 0;
-            return;
-        }
-
-        // Use the date corresponding to now + complete days remaining so that
-        // the time-of-day component (hours/minutes/seconds) is fully captured by
-        // distance.Hours/Minutes/Seconds and does not bleed into the days count.
-        var startDate = now.Date;
-        var endDate = startDate.AddDays(distance.Days);
-
-        int years = endDate.Year - startDate.Year;
-        int months = endDate.Month - startDate.Month;
-        int days = endDate.Day - startDate.Day;
-
-        if (days < 0)
-        {
-            months--;
-            // Borrow from the month immediately before endDate
-            int borrowYear = endDate.Month == 1 ? endDate.Year - 1 : endDate.Year;
-            int borrowMonth = endDate.Month == 1 ? 12 : endDate.Month - 1;
-            days += DateTime.DaysInMonth(borrowYear, borrowMonth);
-        }
-        if (months < 0)
-        {
-            years--;
-            months += 12;
-        }
-
-        Years = years;
-        Months = months;
-        Days = days;
-        Hours = distance.Hours;
-        Minutes = distance.Minutes;
-        Seconds = distance.Seconds;
-        TotalDays = (int)distance.TotalDays;
-    }
-
-    private void ToggleSettings()
-    {
-        SettingsPanelOpen = !SettingsPanelOpen;
-    }
-
-    private async Task OnLanguageChanged()
-    {
-        _currentCulture = CreateCulture(_currentLang);
-        await JS.InvokeVoidAsync("localStorage.setItem", "language", _currentLang);
-        await JS.InvokeVoidAsync("setHtmlLang", T("locale").Split('-')[0]);
-    }
-
-    private static System.Globalization.CultureInfo CreateCulture(string lang)
-    {
-        try
-        {
-            return Translations.TryGetValue(lang, out var dict) && dict.TryGetValue("locale", out var locale)
-                ? System.Globalization.CultureInfo.CreateSpecificCulture(locale)
-                : System.Globalization.CultureInfo.InvariantCulture;
-        }
-        catch
-        {
-            return System.Globalization.CultureInfo.InvariantCulture;
-        }
-    }
-
-    private async Task ApplyDate()
-    {
-        if (TargetDateInputValue == default)
-        {
-            await JS.InvokeVoidAsync("alert", T("alertSelectDate"));
-            return;
-        }
-        if (TargetDateInputValue <= DateTime.Now)
-        {
-            var ok = await JS.InvokeAsync<bool>("confirm", T("confirmPastDate"));
-            if (!ok) return;
-        }
-
-        _targetDate = TargetDateInputValue;
-        _targetDateStr = _targetDate.ToString("yyyy-MM-ddTHH:mm:ss");
-        await JS.InvokeVoidAsync("localStorage.setItem", "targetDate", _targetDateStr);
-        UpdateCountdown();
-    }
-
-    private async Task HandlePhotoUpload(InputFileChangeEventArgs e)
-    {
-        var skipped = 0;
-        foreach (var file in e.GetMultipleFiles(50))
-        {
-            try
-            {
-                await using var stream = file.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
-                using var ms = new MemoryStream();
-                await stream.CopyToAsync(ms);
-                var base64 = Convert.ToBase64String(ms.ToArray());
-                var contentType = string.IsNullOrEmpty(file.ContentType) ? "image/jpeg" : file.ContentType;
-                var dataUrl = $"data:{contentType};base64,{base64}";
-                SlideshowImages.Add(dataUrl);
-            }
-            catch
-            {
-                skipped++;
+        private int Years {
+            get {
+                var span = _targetDate - DateTime.Now;
+                return span.Days / 365;
             }
         }
 
-        if (skipped > 0)
-            await JS.InvokeVoidAsync("alert", T("alertSkippedPhotos"));
-
-        CurrentSlide = 0;
-        StopSlideshowTimer();
-        StartSlideshowTimerIfNeeded();
-        await SaveSlideshowImages();
-    }
-
-    private async Task ClearPhotos()
-    {
-        SlideshowImages.Clear();
-        CurrentSlide = 0;
-        StopSlideshowTimer();
-        StartSlideshowTimerIfNeeded();
-        await JS.InvokeVoidAsync("localStorage.removeItem", "slideshowImages");
-    }
-
-    private async Task SaveSlideshowImages()
-    {
-        try
-        {
-            var json = System.Text.Json.JsonSerializer.Serialize(SlideshowImages);
-            await JS.InvokeVoidAsync("localStorage.setItem", "slideshowImages", json);
+        private int Months {
+            get {
+                var span = _targetDate - DateTime.Now;
+                return (span.Days / 30) % 12;
+            }
         }
-        catch
-        {
-            await JS.InvokeVoidAsync("alert", T("alertStorageError"));
+
+        private int Days {
+            get {
+                var span = _targetDate - DateTime.Now;
+                return span.Days % 30;
+            }
+        }
+
+        private int Hours {
+            get {
+                var span = _targetDate - DateTime.Now;
+                return (int)span.TotalHours % 24;
+            }
+        }
+
+        private int Minutes {
+            get {
+                var span = _targetDate - DateTime.Now;
+                return (int)span.TotalMinutes % 60;
+            }
+        }
+
+        private int Seconds {
+            get {
+                var span = _targetDate - DateTime.Now;
+                return (int)span.TotalSeconds % 60;
+            }
+        }
+
+        protected override async Task OnInitializedAsync() {
+            await JS.InvokeVoidAsync("blazor.registerCountdownUpdate", "update-countdown", UpdateCountdown);
+            await JS.InvokeVoidAsync("blazor.registerCountdownUpdate", "update-countdown2", UpdateCountdown2);
+            await base.OnInitializedAsync();
+        }
+
+        private void UpdateCountdown() {
+            StateHasChanged();
+        }
+
+        private void UpdateCountdown2() {
+            StateHasChanged();
+        }
+
+        protected async ValueTask DisposeAsyncCore() {
+            await JS.InvokeVoidAsync("blazor.unregisterCountdownUpdate", "update-countdown");
+            await JS.InvokeVoidAsync("blazor.unregisterCountdownUpdate", "update-countdown2");
         }
     }
-
-    private void StartSlideshowTimerIfNeeded()
-    {
-        if (ActiveImages.Count > 1 && _slideshowTimer == null)
-        {
-            _slideshowTimer = new Timer(SlideshowIntervalMs);
-            _slideshowTimer.Elapsed += OnSlideshowTick;
-            _slideshowTimer.AutoReset = true;
-            _slideshowTimer.Start();
-        }
-    }
-
-    private void StopSlideshowTimer()
-    {
-        _slideshowTimer?.Stop();
-        _slideshowTimer?.Dispose();
-        _slideshowTimer = null;
-    }
-
-    private void OnSlideshowTick(object? sender, ElapsedEventArgs e)
-    {
-        CurrentSlide = (CurrentSlide + 1) % ActiveImages.Count;
-        InvokeAsync(StateHasChanged);
-    }
-
-    private void PrevSlide()
-    {
-        var active = ActiveImages;
-        CurrentSlide = (CurrentSlide - 1 + active.Count) % active.Count;
-        StopSlideshowTimer();
-        StartSlideshowTimerIfNeeded();
-    }
-
-    private void NextSlide()
-    {
-        var active = ActiveImages;
-        CurrentSlide = (CurrentSlide + 1) % active.Count;
-        StopSlideshowTimer();
-        StartSlideshowTimerIfNeeded();
-    }
-
-    public async ValueTask DisposeAsync()
-    {
-        if (_countdownTimer != null)
-        {
-            _countdownTimer.Stop();
-            _countdownTimer.Dispose();
-        }
-        StopSlideshowTimer();
-        await ValueTask.CompletedTask;
-    }
-}
