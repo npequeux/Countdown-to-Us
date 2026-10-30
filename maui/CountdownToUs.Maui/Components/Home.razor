@@ -307,6 +307,18 @@
     private string TargetDateDisplay => $"{T("targetDatePrefix")} {_targetDate.ToString(T("dateTimeFormat"), _currentCulture)}";
     private string DaysBreakdown => $"{Years} {T("years")}, {Months} {T("months")}, {Days} {T("days")}";
 
+    // Second countdown (offset by 7 days)
+    private DateTime _secondTargetDate;
+    private int _secondYears, _secondMonths, _secondDays, _secondHours, _secondMinutes, _secondSeconds, _secondTotalDays;
+    private string _secondCountdownTitle => $"{T("countdownTo")} {_secondTargetDate.ToString(T("dateFormat"), _currentCulture)}";
+    private string _secondDaysBreakdown => $"{_secondYears} {T("years")}, {_secondMonths} {T("months")}, {_secondDays} {T("days")}";
+
+    // Third countdown (offset by 14 days)
+    private DateTime _thirdTargetDate;
+    private int _thirdYears, _thirdMonths, _thirdDays, _thirdHours, _thirdMinutes, _thirdSeconds, _thirdTotalDays;
+    private string _thirdCountdownTitle => $"{T("countdownTo")} {_thirdTargetDate.ToString(T("dateFormat"), _currentCulture)}";
+    private string _thirdDaysBreakdown => $"{_thirdYears} {T("years")}, {_thirdMonths} {T("months")}, {_thirdDays} {T("days")}";
+
     // Second Countdown values
     private int Years2 { get; set; }
     private int Months2 { get; set; }
