@@ -1,4 +1,4 @@
-@page ""
+@page "/"
 @using System.Timers
 @using System.Linq
 @implements IAsyncDisposable
@@ -77,6 +77,8 @@
         </div>
     </div>
 
+    </div>
+
     @code {
         private string _targetDateStr = "2029-10-01";
         private string _targetDateStr2 = "2030-10-01";
@@ -137,8 +139,7 @@
             StateHasChanged();
         }
 
-        protected async ValueTask DisposeAsyncCore()
-        {
+        private async ValueTask DisposeAsync() {
             timer?.Stop();
             timer?.Dispose();
             await JS.InvokeVoidAsync("blazor.unregisterCountdownUpdate", "update-countdown");
