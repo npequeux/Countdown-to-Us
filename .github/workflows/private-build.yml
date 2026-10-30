@@ -373,11 +373,11 @@ import re, os
 img_dir = 'maui/CountdownToUs.Maui/wwwroot/images'
 files = {}
 for f in os.listdir(img_dir):
-    if f.endswith('.jpg') or f.endswith('.png'):
-        try:
-            files[int(f.split('.')[0])] = f
-        except ValueError:
-            pass
+        if f.endswith('.jpg') or f.endswith('.png'):
+            try:
+                files[int(f.split('.')[0])] = f
+            except ValueError:
+                pass
 
 entries = [f'        "images/{files[i]}"' for i in sorted(files)]
 local_images = ',\n'.join(entries)
