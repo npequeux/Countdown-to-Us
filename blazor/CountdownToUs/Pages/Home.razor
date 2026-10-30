@@ -139,7 +139,7 @@
             StateHasChanged();
         }
 
-        private async ValueTask DisposeAsync() {
+        public async ValueTask DisposeAsync() {
             timer?.Stop();
             timer?.Dispose();
             await JS.InvokeVoidAsync("blazor.unregisterCountdownUpdate", "update-countdown");
