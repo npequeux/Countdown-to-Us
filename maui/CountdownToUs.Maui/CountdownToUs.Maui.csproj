@@ -33,7 +33,9 @@
     <!-- Windows specifics -->
     <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</SupportedOSPlatformVersion>
     <TargetPlatformMinVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</TargetPlatformMinVersion>
-    <ApplicationIcon Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">Platforms\Windows\appicon.ico</ApplicationIcon>
+
+    <!-- Windows packaging: set to None for CI builds, MSIX for release -->
+    <WindowsPackageType Condition="'$(OS)' != 'Windows_NT'">None</WindowsPackageType>
   </PropertyGroup>
 
   <ItemGroup>
