@@ -78,8 +78,8 @@
     </div>
 
     @code {
-        private string _targetDateStr = "2028-10-01";
-        private string _targetDateStr2 = "2029-10-01";
+        private string _targetDateStr = "2029-10-01";
+        private string _targetDateStr2 = "2030-10-01";
         private DateTimeOffset _targetDate => DateTimeOffset.Parse(_targetDateStr);
         private DateTimeOffset _targetDate2 => DateTimeOffset.Parse(_targetDateStr2);
 
@@ -103,7 +103,7 @@
 
         private int Hours {
             get {
-                var span = _targetDate - DateTime.Now;
+                var span = _targetDate - DateTimeOffset.UtcNow;
                 return (int)span.TotalHours % 24;
             }
         }

@@ -150,7 +150,7 @@
 
     private void UpdateCountdown()
     {
-        var now = DateTime.Now;
+        var now = DateTimeOffset.UtcNow;
         var distance = _targetDate - now;
 
         if (distance <= TimeSpan.Zero)
