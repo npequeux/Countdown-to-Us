@@ -1,0 +1,47 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.5.2.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "blazor", "blazor", "{E83BDDD6-600F-B5F0-78FF-47929315255A}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "linux-host", "linux-host", "{0811A103-1DCB-5C78-EB8F-4BF1BEF53317}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "maui", "maui", "{5358A8DD-221C-A68E-DDFB-CD91B98A505E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CountdownToUs", "blazor\CountdownToUs\CountdownToUs.csproj", "{B4BD8BF5-7418-763E-966E-F11A8215DDA5}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CountdownToUs.Linux", "linux-host\CountdownToUs.Linux\CountdownToUs.Linux.csproj", "{26BF83A5-BB55-2A7B-18FC-68C1B3BD3482}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CountdownToUs.Maui", "maui\CountdownToUs.Maui\CountdownToUs.Maui.csproj", "{2FEFB784-CE84-9FB8-293F-BF41940E5F96}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{B4BD8BF5-7418-763E-966E-F11A8215DDA5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B4BD8BF5-7418-763E-966E-F11A8215DDA5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B4BD8BF5-7418-763E-966E-F11A8215DDA5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B4BD8BF5-7418-763E-966E-F11A8215DDA5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{26BF83A5-BB55-2A7B-18FC-68C1B3BD3482}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{26BF83A5-BB55-2A7B-18FC-68C1B3BD3482}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{26BF83A5-BB55-2A7B-18FC-68C1B3BD3482}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{26BF83A5-BB55-2A7B-18FC-68C1B3BD3482}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2FEFB784-CE84-9FB8-293F-BF41940E5F96}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2FEFB784-CE84-9FB8-293F-BF41940E5F96}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2FEFB784-CE84-9FB8-293F-BF41940E5F96}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2FEFB784-CE84-9FB8-293F-BF41940E5F96}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{B4BD8BF5-7418-763E-966E-F11A8215DDA5} = {E83BDDD6-600F-B5F0-78FF-47929315255A}
+		{26BF83A5-BB55-2A7B-18FC-68C1B3BD3482} = {0811A103-1DCB-5C78-EB8F-4BF1BEF53317}
+		{2FEFB784-CE84-9FB8-293F-BF41940E5F96} = {5358A8DD-221C-A68E-DDFB-CD91B98A505E}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {52B69178-5521-4016-927E-1EF420D0D5E7}
+	EndGlobalSection
+EndGlobal

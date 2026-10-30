@@ -43,6 +43,28 @@
 
     <div class="target-date">@TargetDateDisplay</div>
 
+    <!-- Second Countdown -->
+    <div class="countdown second-countdown" style="margin-top: 1.25rem;">
+        <div class="time-unit">
+            <span class="number" id="cnt-days-2">@TotalDays2</span>
+            <span class="label">@T("days2")</span>
+        </div>
+        <div class="time-unit">
+            <span class="number" id="cnt-hours-2">@Hours2.ToString("D2")</span>
+            <span class="label">@T("hours2")</span>
+        </div>
+        <div class="time-unit">
+            <span class="number" id="cnt-minutes-2">@Minutes2.ToString("D2")</span>
+            <span class="label">@T("minutes2")</span>
+        </div>
+        <div class="time-unit">
+            <span class="number" id="cnt-seconds-2">@Seconds2.ToString("D2")</span>
+            <span class="label">@T("seconds2")</span>
+        </div>
+    </div>
+
+    <div class="days-breakdown second-days-breakdown" id="cnt-breakdown-2">@DaysBreakdown2</div>
+
     <div class="settings-wrapper">
         <button class="settings-toggle"
                 @onclick="ToggleSettings"
@@ -130,6 +152,7 @@
         ["en"] = new()
         {
             ["years"] = "Years", ["months"] = "Months", ["days"] = "Days", ["hours"] = "Hours", ["minutes"] = "Minutes", ["seconds"] = "Seconds",
+            ["days2"] = "Day 2", ["hours2"] = "Hours", ["minutes2"] = "Minutes", ["seconds2"] = "Seconds",
             ["settings"] = "Settings",
             ["language"] = "Language",
             ["targetDateLabel"] = "Target Date & Time",
@@ -284,6 +307,18 @@
     private string TargetDateDisplay => $"{T("targetDatePrefix")} {_targetDate.ToString(T("dateTimeFormat"), _currentCulture)}";
     private string DaysBreakdown => $"{Years} {T("years")}, {Months} {T("months")}, {Days} {T("days")}";
 
+    // Second Countdown values
+    private int Years2 { get; set; }
+    private int Months2 { get; set; }
+    private int Days2 { get; set; }
+    private int Hours2 { get; set; }
+    private int Minutes2 { get; set; }
+    private int Seconds2 { get; set; }
+    private int TotalDays2 { get; set; }
+
+    // Second countdown display string
+    private string DaysBreakdown2 => $"{Years2} {T("years")}, {Months2} {T("months")}, {Days2} {T("days")}";
+
     // Slideshow
     private List<string> _defaultImages = DefaultImages.OrderBy(_ => Random.Shared.Next()).ToList();
     private List<string> SlideshowImages { get; set; } = new();
@@ -395,51 +430,94 @@
             Minutes.ToString("D2"),
             Seconds.ToString("D2"),
             DaysBreakdown);
+
+        await JS.InvokeVoidAsync("updateCountdownDisplay",
+            TotalDays2.ToString(),
+            Hours2.ToString("D2"),
+            Minutes2.ToString("D2"),
+            Seconds2.ToString("D2"),
+            DaysBreakdown2);
     }
 
     private void UpdateCountdown()
     {
         var now = DateTime.Now;
         _currentTime = now;
-        var distance = _targetDate - now;
 
-        if (distance <= TimeSpan.Zero)
+        // First countdown (primary)
+        var distance1 = _targetDate - now;
+        if (distance1 <= TimeSpan.Zero)
         {
             Years = Months = Days = Hours = Minutes = Seconds = TotalDays = 0;
-            return;
         }
-
-        // Use the date corresponding to now + complete days remaining so that
-        // the time-of-day component (hours/minutes/seconds) is fully captured by
-        // distance.Hours/Minutes/Seconds and does not bleed into the days count.
-        var startDate = now.Date;
-        var endDate = startDate.AddDays(distance.Days);
-
-        int years = endDate.Year - startDate.Year;
-        int months = endDate.Month - startDate.Month;
-        int days = endDate.Day - startDate.Day;
-
-        if (days < 0)
+        else
         {
-            months--;
-            // Borrow from the month immediately before endDate
-            int borrowYear = endDate.Month == 1 ? endDate.Year - 1 : endDate.Year;
-            int borrowMonth = endDate.Month == 1 ? 12 : endDate.Month - 1;
-            days += DateTime.DaysInMonth(borrowYear, borrowMonth);
-        }
-        if (months < 0)
-        {
-            years--;
-            months += 12;
+            var startDate = now.Date;
+            var endDate = startDate.AddDays(distance1.Days);
+
+            int years = endDate.Year - startDate.Year;
+            int months = endDate.Month - startDate.Month;
+            int days = endDate.Day - startDate.Day;
+
+            if (days < 0)
+            {
+                months--;
+                int borrowYear = endDate.Month == 1 ? endDate.Year - 1 : endDate.Year;
+                int borrowMonth = endDate.Month == 1 ? 12 : endDate.Month - 1;
+                days += DateTime.DaysInMonth(borrowYear, borrowMonth);
+            }
+            if (months < 0)
+            {
+                years--;
+                months += 12;
+            }
+
+            Years = years;
+            Months = months;
+            Days = days;
+            Hours = distance1.Hours;
+            Minutes = distance1.Minutes;
+            Seconds = distance1.Seconds;
+            TotalDays = (int)distance1.TotalDays;
         }
 
-        Years = years;
-        Months = months;
-        Days = days;
-        Hours = distance.Hours;
-        Minutes = distance.Minutes;
-        Seconds = distance.Seconds;
-        TotalDays = (int)distance.TotalDays;
+        // Second countdown (offset by 7 days)
+        var offsetDate = _targetDate.AddDays(7);
+        var distance2 = offsetDate - now;
+        if (distance2 <= TimeSpan.Zero)
+        {
+            Years2 = Months2 = Days2 = Hours2 = Minutes2 = Seconds2 = TotalDays2 = 0;
+        }
+        else
+        {
+            var startDate = now.Date;
+            var endDate = startDate.AddDays(distance2.Days);
+
+            int years = endDate.Year - startDate.Year;
+            int months = endDate.Month - startDate.Month;
+            int days = endDate.Day - startDate.Day;
+
+            if (days < 0)
+            {
+                months--;
+                int borrowYear = endDate.Month == 1 ? endDate.Year - 1 : endDate.Year;
+                int borrowMonth = endDate.Month == 1 ? 12 : endDate.Month - 1;
+                days += DateTime.DaysInMonth(borrowYear, borrowMonth);
+            }
+            if (months < 0)
+            {
+                years--;
+                months += 12;
+            }
+
+            Years2 = years;
+            Months2 = months;
+            Days2 = days;
+            Hours2 = distance2.Hours;
+            Minutes2 = distance2.Minutes;
+            Seconds2 = distance2.Seconds;
+            TotalDays2 = (int)distance2.TotalDays;
+        }
     }
 
     private void ToggleSettings()
