@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "YMmCu+EzTYg=",
+  "dgSpecHash": "XUHlZ9+qXEw=",
   "success": true,
   "projectFilePath": "C:\\Users\\npequ\\codes\\Countdown-to-Us\\V2\\CountdownToUs.csproj",
   "expectedPackageFiles": [
@@ -124,6 +124,9 @@
     "C:\\Users\\npequ\\.nuget\\packages\\xamarin.kotlinx.coroutines.core.jvm\\1.10.2.1\\xamarin.kotlinx.coroutines.core.jvm.1.10.2.1.nupkg.sha512",
     "C:\\Users\\npequ\\.nuget\\packages\\xamarin.kotlinx.serialization.core\\1.9.0.1\\xamarin.kotlinx.serialization.core.1.9.0.1.nupkg.sha512",
     "C:\\Users\\npequ\\.nuget\\packages\\xamarin.kotlinx.serialization.core.jvm\\1.9.0.1\\xamarin.kotlinx.serialization.core.jvm.1.9.0.1.nupkg.sha512",
+    "C:\\Users\\npequ\\.nuget\\packages\\microsoft.netcore.app.ref\\10.0.8\\microsoft.netcore.app.ref.10.0.8.nupkg.sha512",
+    "C:\\Users\\npequ\\.nuget\\packages\\microsoft.netcore.app.ref\\10.0.8\\microsoft.netcore.app.ref.10.0.8.nupkg.sha512",
+    "C:\\Users\\npequ\\.nuget\\packages\\microsoft.netcore.app.ref\\10.0.8\\microsoft.netcore.app.ref.10.0.8.nupkg.sha512",
     "C:\\Users\\npequ\\.nuget\\packages\\microsoft.windows.sdk.net.ref\\10.0.19041.57\\microsoft.windows.sdk.net.ref.10.0.19041.57.nupkg.sha512"
   ],
   "logs": []

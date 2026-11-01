@@ -1,0 +1,10 @@
+<api type="debug" assembly-name="CountdownToUs" mvid="4c72c23a5f344e8badf8449626f3709f">
+  <java-to-managed>
+    <entry java-name="crc646f82df5012c7bc2b/MainActivity" managed-name="CountdownToUs.MainActivity, CountdownToUs" managed-type-token-id="33554441" />
+    <entry java-name="crc646f82df5012c7bc2b/MainApplication" managed-name="CountdownToUs.MainApplication, CountdownToUs" managed-type-token-id="33554442" />
+  </java-to-managed>
+  <managed-to-java>
+    <entry java-name="crc646f82df5012c7bc2b/MainActivity" managed-name="CountdownToUs.MainActivity, CountdownToUs" managed-type-token-id="33554441" />
+    <entry java-name="crc646f82df5012c7bc2b/MainApplication" managed-name="CountdownToUs.MainApplication, CountdownToUs" managed-type-token-id="33554442" />
+  </managed-to-java>
+</api>

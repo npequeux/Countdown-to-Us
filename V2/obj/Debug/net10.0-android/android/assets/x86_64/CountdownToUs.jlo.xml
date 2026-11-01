@@ -1,0 +1,15 @@
+<api>
+  <jcw-types>
+    <type name="MainActivity" package="crc646f82df5012c7bc2b" application_java_class="android.app.Application" mono_runtime_initialization="mono.MonoPackageManager.LoadApplication (context);" extends_type="crc6488302ad6e9e4df1a.MauiAppCompatActivity" partial_assembly_qualified_name="CountdownToUs.MainActivity, CountdownToUs">
+      <constructors>
+        <constructor name="MainActivity" method="n_.ctor:()V:" jni_signature="()V" managed_parameters="" retval="void" is_dynamically_registered="True" />
+        <constructor name="MainActivity" method="n_.ctor:(I)V:" jni_signature="(I)V" managed_parameters="System.Int32, System.Private.CoreLib" params="int p0" retval="void" is_dynamically_registered="True" super_call="p0" activate_call="p0" />
+      </constructors>
+    </type>
+    <type name="MainApplication" package="crc646f82df5012c7bc2b" application_java_class="android.app.Application" mono_runtime_initialization="mono.MonoPackageManager.LoadApplication (context);" extends_type="crc6488302ad6e9e4df1a.MauiApplication" is_application="True" partial_assembly_qualified_name="CountdownToUs.MainApplication, CountdownToUs" application_constructor="MainApplication" />
+  </jcw-types>
+  <acw-types partial-assembly-name="CountdownToUs" module-name="CountdownToUs.dll">
+    <type assembly-qualified-name="CountdownToUs.MainActivity, CountdownToUs, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null" compat-jni-name="countdowntous.MainActivity" java-key="crc646f82df5012c7bc2b.MainActivity" managed-key="CountdownToUs.MainActivity" partial-assembly-qualified-name="CountdownToUs.MainActivity, CountdownToUs" />
+    <type assembly-qualified-name="CountdownToUs.MainApplication, CountdownToUs, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null" compat-jni-name="countdowntous.MainApplication" java-key="crc646f82df5012c7bc2b.MainApplication" managed-key="CountdownToUs.MainApplication" partial-assembly-qualified-name="CountdownToUs.MainApplication, CountdownToUs" />
+  </acw-types>
+</api>
