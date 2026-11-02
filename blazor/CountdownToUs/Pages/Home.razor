@@ -122,24 +122,83 @@
             }
         }
 
+        private int Years2 {
+            get {
+                return (int)(_targetDate2.Subtract(DateTime.Now).TotalDays / 365.25);
+            }
+        }
+
+        private int Months2 {
+            get {
+                return (_targetDate2.Subtract(DateTime.Now).TotalDays / 365.25).ToString("0.").Split(".")[1].PadRight(2, '0').Substring(0, 2) != "00" ? (int)((_targetDate2.Subtract(DateTime.Now).TotalDays / 365.25).ToString("0.").Split(".")[1].PadRight(2, '0').Substring(0, 2)) : 0;
+            }
+        }
+
+        private int Days2 {
+            get {
+                return (int)_targetDate2.Subtract(DateTime.Now).TotalDays % 365;
+            }
+        }
+
+        private int Hours2 {
+            get {
+                var span = _targetDate2 - DateTimeOffset.UtcNow;
+                return (int)span.TotalHours % 24;
+            }
+        }
+
+        private int Minutes2 {
+            get {
+                return (int)_targetDate2.Subtract(DateTime.Now).TotalMinutes % 60;
+            }
+        }
+
+        private int Seconds2 {
+            get {
+                return (int)_targetDate2.Subtract(DateTime.Now).TotalSeconds % 60;
+            }
+        }
+
+        private string CountdownTitle = "Countdown to US Presidential Election 2029";
+        private string CountdownTitle2 = "Countdown to US Presidential Election 2030";
+        private string CurrentImageSrc = "/images/paradise-island.jpg";
+        private List<string> ActiveImages = new() {
+            "/images/paradise-island.jpg",
+            "/images/tropical-beach.jpg",
+            "/images/sunset-vista.jpg"
+        };
+
+        private int CurrentImageIndex => 0;
+
+        private Func<Task> PrevSlide = () => {
+            if (ActiveImages.Count > 1) {
+                CurrentImageIndex--;
+                if (CurrentImageIndex < 0) CurrentImageIndex = ActiveImages.Count - 1;
+            }
+            StateHasChanged();
+            return Task.CompletedTask;
+        };
+
+        private Func<Task> NextSlide = () => {
+            if (ActiveImages.Count > 1) {
+                CurrentImageIndex++;
+                if (CurrentImageIndex >= ActiveImages.Count) CurrentImageIndex = 0;
+            }
+            StateHasChanged();
+            return Task.CompletedTask;
+        };
+
         protected override async Task OnInitializedAsync() {
-            timer = new Timer(1000);
+            var timer = new Timer(1000);
             timer.Elapsed += (sender, e) => InvokeAsync(StateHasChanged);
             timer.Start();
-            await JS.InvokeVoidAsync("blazor.registerCountdownUpdate", "update-countdown", UpdateCountdown);
-            await JS.InvokeVoidAsync("blazor.registerCountdownUpdate", "update-countdown2", UpdateCountdown2);
+            await JS.InvokeVoidAsync("blazor.registerCountdownUpdate", "update-countdown", () => StateHasChanged());
+            await JS.InvokeVoidAsync("blazor.registerCountdownUpdate", "update-countdown2", () => StateHasChanged());
             await base.OnInitializedAsync();
         }
 
-        private void UpdateCountdown() {
-            StateHasChanged();
-        }
-
-        private void UpdateCountdown2() {
-            StateHasChanged();
-        }
-
         public async ValueTask DisposeAsync() {
+            var timer = new Timer(1000);
             timer?.Stop();
             timer?.Dispose();
             await JS.InvokeVoidAsync("blazor.unregisterCountdownUpdate", "update-countdown");
