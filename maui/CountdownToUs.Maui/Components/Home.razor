@@ -65,6 +65,59 @@
 
     <div class="days-breakdown second-days-breakdown" id="cnt-breakdown-2">@DaysBreakdown2</div>
 
+    <!-- ─── First Countdown ──────────────────────────────────────────────────── -->
+    <div class="countdown">
+        <div class="time-unit">
+            <span class="number" id="cnt-days">@TotalDays</span>
+            <span class="label">@T("days")</span>
+        </div>
+        <div class="time-unit">
+            <span class="number" id="cnt-hours">@Hours.ToString("D2")</span>
+            <span class="label">@T("hours")</span>
+        </div>
+        <div class="time-unit">
+            <span class="number" id="cnt-minutes">@Minutes.ToString("D2")</span>
+            <span class="label">@T("minutes")</span>
+        </div>
+        <div class="time-unit">
+            <span class="number" id="cnt-seconds">@Seconds.ToString("D2")</span>
+            <span class="label">@T("seconds")</span>
+        </div>
+    </div>
+
+    <!-- ─── Second Countdown ─────────────────────────────────────────────────── -->
+    <div class="countdown">
+        <div class="time-unit">
+            <span class="number" id="cnt-days-2">@TotalDays2</span>
+            <span class="label">@T("days")</span>
+        </div>
+        <div class="time-unit">
+            <span class="number" id="cnt-hours-2">@Hours2.ToString("D2")</span>
+            <span class="label">@T("hours")</span>
+        </div>
+        <div class="time-unit">
+            <span class="number" id="cnt-minutes-2">@Minutes2.ToString("D2")</span>
+            <span class="label">@T("minutes")</span>
+        </div>
+        <div class="time-unit">
+            <span class="number" id="cnt-seconds-2">@Seconds2.ToString("D2")</span>
+            <span class="label">@T("seconds")</span>
+        </div>
+    </div>
+
+    <!-- ─── Days Breakdown (first) ───────────────────────────────────────────── -->
+    <div class="days-breakdown" id="cnt-breakdown">@DaysBreakdown</div>
+
+    <!-- ─── Days Breakdown (second) ────────────────────────────────────────── -->
+    <div class="days-breakdown" id="cnt-breakdown-2">@DaysBreakdown2</div>
+
+    <!-- ─── Target Date (first) ─────────────────────────────────────────────── -->
+    <div class="target-date">@TargetDateDisplay</div>
+
+    <!-- ─── Target Date (second) ─────────────────────────────────────────────── -->
+    <div class="target-date">@TargetDateDisplay2</div>
+
+    <!-- ─── Settings Panel ───────────────────────────────────────────────────── -->
     <div class="settings-wrapper">
         <button class="settings-toggle"
                 @onclick="ToggleSettings"
@@ -152,6 +205,7 @@
         ["en"] = new()
         {
             ["years"] = "Years", ["months"] = "Months", ["days"] = "Days", ["hours"] = "Hours", ["minutes"] = "Minutes", ["seconds"] = "Seconds",
+            ["days2"] = "Days (Second)", ["hours2"] = "Hours (Second)", ["minutes2"] = "Minutes (Second)", ["seconds2"] = "Seconds (Second)",
             ["days2"] = "Day 2", ["hours2"] = "Hours", ["minutes2"] = "Minutes", ["seconds2"] = "Seconds",
             ["settings"] = "Settings",
             ["language"] = "Language",
@@ -183,6 +237,7 @@
         ["fr"] = new()
         {
             ["years"] = "Ans", ["months"] = "Mois", ["days"] = "Jours", ["hours"] = "Heures", ["minutes"] = "Minutes", ["seconds"] = "Secondes",
+            ["days2"] = "Jours (deuxième)", ["hours2"] = "Heures (deuxième)", ["minutes2"] = "Minutes (deuxième)", ["seconds2"] = "Secondes (deuxième)",
             ["settings"] = "Paramètres",
             ["language"] = "Langue",
             ["targetDateLabel"] = "Date et heure cible",
@@ -213,6 +268,7 @@
         ["es"] = new()
         {
             ["years"] = "Años", ["months"] = "Meses", ["days"] = "Días", ["hours"] = "Horas", ["minutes"] = "Minutos", ["seconds"] = "Segundos",
+            ["days2"] = "Días (segundo)", ["hours2"] = "Horas (segundo)", ["minutes2"] = "Minutos (segundo)", ["seconds2"] = "Segundos (segundo)",
             ["settings"] = "Configuración",
             ["language"] = "Idioma",
             ["targetDateLabel"] = "Fecha y hora objetivo",
@@ -243,6 +299,7 @@
         ["zh"] = new()
         {
             ["years"] = "年", ["months"] = "月", ["days"] = "天", ["hours"] = "小时", ["minutes"] = "分钟", ["seconds"] = "秒",
+            ["days2"] = "天 (第二个)", ["hours2"] = "小时 (第二个)", ["minutes2"] = "分钟 (第二个)", ["seconds2"] = "秒 (第二个)",
             ["settings"] = "设置",
             ["language"] = "语言",
             ["targetDateLabel"] = "目标日期和时间",
