@@ -9,7 +9,7 @@
 <PageTitle>Countdown to Us</PageTitle>
 
 <div class="container">
-    <h1>@CountdownTitle</h1>
+    <h1>@T("countdownToUsLabel") @CountdownTitle</h1>
 
     <div class="image-container">
         <img src="@CurrentImageSrc" alt="Paradise island" class="us-image" />
@@ -35,6 +35,49 @@
         </div>
         <div class="time-unit">
             <span class="number" id="cnt-seconds">@Seconds.ToString("D2")</span>
+            <span class="label">@T("seconds")</span>
+        </div>
+    </div>
+
+    <div class="days-breakdown" id="cnt-breakdown">@DaysBreakdown</div>
+
+    <h2>@CountdownTitle2</h2>
+
+    <div class="countdown">
+        <div class="time-unit">
+            <span class="number" id="cnt-days-1">@TotalDays1</span>
+            <span class="label">@T("days")</span>
+        </div>
+        <div class="time-unit">
+            <span class="number" id="cnt-hours-1">@Hours1.ToString("D2")</span>
+            <span class="label">@T("hours")</span>
+        </div>
+        <div class="time-unit">
+            <span class="number" id="cnt-minutes-1">@Minutes1.ToString("D2")</span>
+            <span class="label">@T("minutes")</span>
+        </div>
+        <div class="time-unit">
+            <span class="number" id="cnt-seconds-1">@Seconds1.ToString("D2")</span>
+            <span class="label">@T("seconds")</span>
+        </div>
+    </div>
+
+    <div class="countdown second-countdown">
+        <h3>@T("countdownToUsLabel", _secondTargetDate.ToString(T("dateFormat"), _currentCulture))</h3>
+        <div class="time-unit">
+            <span class="number" id="cnt-days-2">@TotalDays2</span>
+            <span class="label">@T("days")</span>
+        </div>
+        <div class="time-unit">
+            <span class="number" id="cnt-hours-2">@Hours2.ToString("D2")</span>
+            <span class="label">@T("hours")</span>
+        </div>
+        <div class="time-unit">
+            <span class="number" id="cnt-minutes-2">@Minutes2.ToString("D2")</span>
+            <span class="label">@T("minutes")</span>
+        </div>
+        <div class="time-unit">
+            <span class="number" id="cnt-seconds-2">@Seconds2.ToString("D2")</span>
             <span class="label">@T("seconds")</span>
         </div>
     </div>
@@ -86,11 +129,18 @@
                     </select>
                 </div>
                 <div class="settings-group">
-                    <label for="target-date-input">@T("targetDateLabel")</label>
-                    <input type="datetime-local" id="target-date-input"
+                    <label for="target-date-input-1">@T("targetDateLabel")</label>
+                    <input type="datetime-local" id="target-date-input-1"
                            value="@TargetDateInputValue"
-                           @onchange="OnTargetDateInputChanged" />
+                           @onchange="OnTargetDateInputChanged1" />
                     <button class="btn" @onclick="ApplyDate">@T("apply")</button>
+                </div>
+                <div class="settings-group">
+                    <label for="target-date-input-2">Countdown to Us (Second)</label>
+                    <input type="datetime-local" id="target-date-input-2"
+                           value="@SecondTargetDateInputValue"
+                           @onchange="OnSecondTargetDateInputChanged" />
+                    <button class="btn" @onclick="ApplySecondDate">@T("apply")</button>
                 </div>
                 <div class="settings-group">
                     <label for="photo-upload">@T("uploadPhotos")</label>
@@ -178,7 +228,8 @@
             ["wallpaperError"] = "Failed to set wallpaper",
             ["dateFormat"] = "MMMM d, yyyy",
             ["dateTimeFormat"] = "MMMM d, yyyy 'at' HH:mm:ss",
-            ["locale"] = "en-US"
+            ["locale"] = "en-US",
+            ["countdownToUsLabel"] = "Countdown to Us 🤍",
         },
         ["fr"] = new()
         {
@@ -208,7 +259,8 @@
             ["wallpaperError"] = "Impossible de définir le fond d'écran",
             ["dateFormat"] = "d MMMM yyyy",
             ["dateTimeFormat"] = "d MMMM yyyy 'à' HH:mm:ss",
-            ["locale"] = "fr-FR"
+            ["locale"] = "fr-FR",
+            ["countdownToUsLabel"] = "Compte à rebours vers nous 🤍",
         },
         ["es"] = new()
         {
@@ -238,7 +290,8 @@
             ["wallpaperError"] = "No se pudo establecer el fondo",
             ["dateFormat"] = "d 'de' MMMM 'de' yyyy",
             ["dateTimeFormat"] = "d 'de' MMMM 'de' yyyy 'a las' HH:mm:ss",
-            ["locale"] = "es-ES"
+            ["locale"] = "es-ES",
+            ["countdownToUsLabel"] = "Cuenta regresiva hacia nosotros 🤍",
         },
         ["zh"] = new()
         {
@@ -268,9 +321,9 @@
             ["wallpaperError"] = "设置壁纸失败",
             ["dateFormat"] = "yyyy年M月d日",
             ["dateTimeFormat"] = "yyyy年M月d日 HH:mm:ss",
-            ["locale"] = "zh-CN"
-        }
-    };
+            ["locale"] = "zh-CN",
+            ["countdownToUsLabel"] = "倒计时致我们 🤍",
+        },
 
     private string _currentLang = "en";
     private System.Globalization.CultureInfo _currentCulture = System.Globalization.CultureInfo.CreateSpecificCulture("en-US");
@@ -293,19 +346,33 @@
     private Timer? _countdownTimer;
     private Timer? _slideshowTimer;
 
-    // Countdown values
-    private int Years { get; set; }
-    private int Months { get; set; }
-    private int Days { get; set; }
-    private int Hours { get; set; }
-    private int Minutes { get; set; }
-    private int Seconds { get; set; }
-    private int TotalDays { get; set; }
+    // Countdown values (first countdown - to us)
+    private int Years1 { get; set; }
+    private int Months1 { get; set; }
+    private int Days1 { get; set; }
+    private int Hours1 { get; set; }
+    private int Minutes1 { get; set; }
+    private int Seconds1 { get; set; }
+    private int TotalDays1 { get; set; }
+
+    // Countdown values (second countdown - to us)
+    private int Years2 { get; set; }
+    private int Months2 { get; set; }
+    private int Days2 { get; set; }
+    private int Hours2 { get; set; }
+    private int Minutes2 { get; set; }
+    private int Seconds2 { get; set; }
+    private int TotalDays2 { get; set; }
+
+    // Second countdown target date
+    private const string DefaultSecondTargetDate = "2026-12-31T23:59";
+    private string _secondTargetDateStr = DefaultSecondTargetDate;
+    private DateTime _secondTargetDate;
 
     // Display strings
-    private string CountdownTitle => $"{T("countdownTo")} {_targetDate.ToString(T("dateFormat"), _currentCulture)}";
-    private string TargetDateDisplay => $"{T("targetDatePrefix")} {_targetDate.ToString(T("dateTimeFormat"), _currentCulture)}";
-    private string DaysBreakdown => $"{Years} {T("years")}, {Months} {T("months")}, {Days} {T("days")}";
+    private string CountdownTitle => $"{T("countdownTo")} {_targetDate.ToString(T("dateFormat"), _currentCulture)} & {T("countdownTo")} {_secondTargetDate.ToString(T("dateFormat"), _currentCulture)}";
+    private string TargetDateDisplay => $"🎉 {_targetDate.ToString(T("dateTimeFormat"), _currentCulture)} • 🤍 {_secondTargetDate.ToString(T("dateTimeFormat"), _currentCulture)}";
+    private string DaysBreakdown => $"{Years1} {T("years")}, {Months1} {T("months")}, {Days1} {T("days")} & {Years2} {T("years")}, {Months2} {T("months")}, {Days2} {T("days")}";
 
     // Second Countdown values
     private int Years2 { get; set; }
