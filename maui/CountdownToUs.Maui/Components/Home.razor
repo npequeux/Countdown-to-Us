@@ -297,22 +297,36 @@
     private Timer? _slideshowTimer;
 
     // Countdown values (passed by ref to ComputeCountdown)
-    private ref int Years { get; set; }
-    private ref int Months { get; set; }
-    private ref int Days { get; set; }
-    private ref int Hours { get; set; }
-    private ref int Minutes { get; set; }
-    private ref int Seconds { get; set; }
-    private ref int TotalDays { get; set; }
+    private int _years;
+    private ref int Years => ref _years;
+    private int _months;
+    private ref int Months => ref _months;
+    private int _days;
+    private ref int Days => ref _days;
+    private int _hours;
+    private ref int Hours => ref _hours;
+    private int _minutes;
+    private ref int Minutes => ref _minutes;
+    private int _seconds;
+    private ref int Seconds => ref _seconds;
+    private int _totalDays;
+    private ref int TotalDays => ref _totalDays;
 
     // Second countdown values (targeting 2029)
-    private ref int Years2 { get; set; }
-    private ref int Months2 { get; set; }
-    private ref int Days2 { get; set; }
-    private ref int Hours2 { get; set; }
-    private ref int Minutes2 { get; set; }
-    private ref int Seconds2 { get; set; }
-    private ref int TotalDays2 { get; set; }
+    private int _years2;
+    private ref int Years2 => ref _years2;
+    private int _months2;
+    private ref int Months2 => ref _months2;
+    private int _days2;
+    private ref int Days2 => ref _days2;
+    private int _hours2;
+    private ref int Hours2 => ref _hours2;
+    private int _minutes2;
+    private ref int Minutes2 => ref _minutes2;
+    private int _seconds2;
+    private ref int Seconds2 => ref _seconds2;
+    private int _totalDays2;
+    private ref int TotalDays2 => ref _totalDays2;
 
     // Display strings
     private string CountdownTitle => $"{T("countdownTo")} {_targetDate.ToString(T("dateFormat"), _currentCulture)}";
