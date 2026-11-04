@@ -132,6 +132,7 @@
 
 @code {
     private const string DefaultTargetDate = CountdownToUs.Maui.Constants.AppDefaults.TargetDateIso;
+    private const string SecondTargetDate = CountdownToUs.Maui.Constants.AppDefaults.SecondTargetDateIso;
     private static readonly string[] DefaultImages = new[]
     {
         "images/1.jpg",
@@ -295,23 +296,23 @@
     private Timer? _countdownTimer;
     private Timer? _slideshowTimer;
 
-    // Countdown values
-    private int Years { get; set; }
-    private int Months { get; set; }
-    private int Days { get; set; }
-    private int Hours { get; set; }
-    private int Minutes { get; set; }
-    private int Seconds { get; set; }
-    private int TotalDays { get; set; }
+    // Countdown values (passed by ref to ComputeCountdown)
+    private ref int Years { get; set; }
+    private ref int Months { get; set; }
+    private ref int Days { get; set; }
+    private ref int Hours { get; set; }
+    private ref int Minutes { get; set; }
+    private ref int Seconds { get; set; }
+    private ref int TotalDays { get; set; }
 
     // Second countdown values (targeting 2029)
-    private int Years2 { get; set; }
-    private int Months2 { get; set; }
-    private int Days2 { get; set; }
-    private int Hours2 { get; set; }
-    private int Minutes2 { get; set; }
-    private int Seconds2 { get; set; }
-    private int TotalDays2 { get; set; }
+    private ref int Years2 { get; set; }
+    private ref int Months2 { get; set; }
+    private ref int Days2 { get; set; }
+    private ref int Hours2 { get; set; }
+    private ref int Minutes2 { get; set; }
+    private ref int Seconds2 { get; set; }
+    private ref int TotalDays2 { get; set; }
 
     // Display strings
     private string CountdownTitle => $"{T("countdownTo")} {_targetDate.ToString(T("dateFormat"), _currentCulture)}";
