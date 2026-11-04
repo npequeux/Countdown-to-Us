@@ -90,6 +90,7 @@
                     <label for="target-date-input">@T("targetDateLabel")</label>
                     <input type="datetime-local" id="target-date-input"
                            value="@TargetDateInputValue"
+                           @oninput="OnTargetDateInputChanged"
                            @onchange="OnTargetDateInputChanged" />
                     <button class="btn" @onclick="ApplyDate">@T("apply")</button>
                 </div>
@@ -542,9 +543,8 @@
 
     private async Task ApplyDate()
     {
-        if (!DateTime.TryParseExact(
+        if (!DateTime.TryParse(
                 TargetDateInputValue,
-                TargetDateInputFormat,
                 System.Globalization.CultureInfo.InvariantCulture,
                 System.Globalization.DateTimeStyles.None,
                 out var parsedTargetDate))
@@ -560,11 +560,12 @@
 
         _targetDate = parsedTargetDate;
         TargetDateInputValue = _targetDate.ToString(TargetDateInputFormat, System.Globalization.CultureInfo.InvariantCulture);
-        _targetDateStr = _targetDate.ToString("yyyy-MM-ddTHH:mm:ss");
+        _targetDateStr = _targetDate.ToString("yyyy-MM-ddTHH:mm:ss", System.Globalization.CultureInfo.InvariantCulture);
         _cachedWallpaperBackground = null;
         await JS.InvokeVoidAsync("localStorage.setItem", "targetDate", _targetDateStr);
         await SyncWidgetTargetDateAsync();
         UpdateCountdown();
+        await UpdateCountdownDisplayAsync();
     }
 
     private void OnTargetDateInputChanged(ChangeEventArgs e)
