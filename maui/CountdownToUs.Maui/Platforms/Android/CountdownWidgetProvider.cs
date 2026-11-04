@@ -24,19 +24,22 @@ public class CountdownWidgetProvider : AppWidgetProvider
         Constants.AppDefaults.TargetDateIso,
         CultureInfo.InvariantCulture);
 
-    public override void OnEnabled(Context context)
+    public override void OnEnabled([System.Diagnostics.CodeAnalysis.MaybeNull] Context context)
     {
         base.OnEnabled(context);
         ScheduleUpdates(context);
     }
 
-    public override void OnDisabled(Context context)
+    public override void OnDisabled([System.Diagnostics.CodeAnalysis.MaybeNull] Context context)
     {
         base.OnDisabled(context);
         CancelUpdates(context);
     }
 
-    public override void OnUpdate(Context context, AppWidgetManager appWidgetManager, int[] appWidgetIds)
+    public override void OnUpdate(
+        [System.Diagnostics.CodeAnalysis.MaybeNull] Context context,
+        [System.Diagnostics.CodeAnalysis.MaybeNull] AppWidgetManager appWidgetManager,
+        [System.Diagnostics.CodeAnalysis.MaybeNull] int[] appWidgetIds)
     {
         base.OnUpdate(context, appWidgetManager, appWidgetIds);
         foreach (var appWidgetId in appWidgetIds)
@@ -47,7 +50,9 @@ public class CountdownWidgetProvider : AppWidgetProvider
         ScheduleUpdates(context);
     }
 
-    public override void OnReceive(Context context, Intent intent)
+    public override void OnReceive(
+        [System.Diagnostics.CodeAnalysis.MaybeNull] Context context,
+        [System.Diagnostics.CodeAnalysis.MaybeNull] Intent intent)
     {
         base.OnReceive(context, intent);
 
