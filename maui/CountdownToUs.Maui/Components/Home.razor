@@ -43,6 +43,29 @@
 
     <div class="target-date">@TargetDateDisplay</div>
 
+    <hr class="countdown-divider" />
+
+    <div class="countdown countdown-second">
+        <div class="time-unit">
+            <span class="number" id="cnt2-days">@TotalDays2</span>
+            <span class="label">@T("days")</span>
+        </div>
+        <div class="time-unit">
+            <span class="number" id="cnt2-hours">@Hours2.ToString("D2")</span>
+            <span class="label">@T("hours")</span>
+        </div>
+        <div class="time-unit">
+            <span class="number" id="cnt2-minutes">@Minutes2.ToString("D2")</span>
+            <span class="label">@T("minutes")</span>
+        </div>
+        <div class="time-unit">
+            <span class="number" id="cnt2-seconds">@Seconds2.ToString("D2")</span>
+            <span class="label">@T("seconds")</span>
+        </div>
+    </div>
+
+    <div class="days-breakdown" id="cnt-breakdown-2">@SecondDaysBreakdown</div>
+
     <div class="settings-wrapper">
         <button class="settings-toggle"
                 @onclick="ToggleSettings"
@@ -267,6 +290,8 @@
 
     private string _targetDateStr = DefaultTargetDate;
     private DateTime _targetDate;
+    private string _secondTargetDateStr = SecondTargetDate;
+    private DateTime _secondTargetDate;
     private Timer? _countdownTimer;
     private Timer? _slideshowTimer;
 
@@ -279,10 +304,21 @@
     private int Seconds { get; set; }
     private int TotalDays { get; set; }
 
+    // Second countdown values (targeting 2029)
+    private int Years2 { get; set; }
+    private int Months2 { get; set; }
+    private int Days2 { get; set; }
+    private int Hours2 { get; set; }
+    private int Minutes2 { get; set; }
+    private int Seconds2 { get; set; }
+    private int TotalDays2 { get; set; }
+
     // Display strings
     private string CountdownTitle => $"{T("countdownTo")} {_targetDate.ToString(T("dateFormat"), _currentCulture)}";
     private string TargetDateDisplay => $"{T("targetDatePrefix")} {_targetDate.ToString(T("dateTimeFormat"), _currentCulture)}";
+    private string SecondTargetDateDisplay => $"{T("targetDatePrefix")} {_secondTargetDate.ToString(T("dateTimeFormat"), _currentCulture)}";
     private string DaysBreakdown => $"{Years} {T("years")}, {Months} {T("months")}, {Days} {T("days")}";
+    private string SecondDaysBreakdown => $"{Years2} {T("years")}, {Months2} {T("months")}, {Days2} {T("days")}";
 
     // Slideshow
     private List<string> _defaultImages = DefaultImages.OrderBy(_ => Random.Shared.Next()).ToList();
@@ -326,6 +362,7 @@
         var stored = await JS.InvokeAsync<string?>("localStorage.getItem", "targetDate");
         _targetDateStr = stored ?? DefaultTargetDate;
         _targetDate = DateTime.Parse(_targetDateStr, System.Globalization.CultureInfo.InvariantCulture);
+        _secondTargetDate = DateTime.Parse(_secondTargetDateStr, System.Globalization.CultureInfo.InvariantCulture);
         TargetDateInputValue = _targetDate.ToString(TargetDateInputFormat, System.Globalization.CultureInfo.InvariantCulture);
         await SyncWidgetTargetDateAsync();
 
@@ -401,11 +438,25 @@
     {
         var now = DateTime.Now;
         _currentTime = now;
-        var distance = _targetDate - now;
+
+        ComputeCountdown(now, _targetDate, ref Years, ref Months, ref Days, ref Hours, ref Minutes, ref Seconds, ref TotalDays);
+        ComputeCountdown(now, _secondTargetDate, ref Years2, ref Months2, ref Days2, ref Hours2, ref Minutes2, ref Seconds2, ref TotalDays2);
+    }
+
+    /// <summary>
+    /// Computes the years/months/days/hours/minutes/seconds between
+    /// <paramref name="now"/> and <paramref name="targetDate"/>.  Uses the date
+    /// corresponding to now + complete days remaining so that the time-of-day
+    /// component (hours/minutes/seconds) is fully captured by
+    /// distance.Hours/Minutes/Seconds and does not bleed into the days count.
+    /// </summary>
+    private static void ComputeCountdown(DateTime now, DateTime targetDate, ref int years, ref int months, ref int days, ref int hours, ref int minutes, ref int seconds, ref int totalDays)
+    {
+        var distance = targetDate - now;
 
         if (distance <= TimeSpan.Zero)
         {
-            Years = Months = Days = Hours = Minutes = Seconds = TotalDays = 0;
+            years = months = days = hours = minutes = seconds = totalDays = 0;
             return;
         }
 
@@ -415,31 +466,31 @@
         var startDate = now.Date;
         var endDate = startDate.AddDays(distance.Days);
 
-        int years = endDate.Year - startDate.Year;
-        int months = endDate.Month - startDate.Month;
-        int days = endDate.Day - startDate.Day;
+        int y = endDate.Year - startDate.Year;
+        int m = endDate.Month - startDate.Month;
+        int d = endDate.Day - startDate.Day;
 
-        if (days < 0)
+        if (d < 0)
         {
-            months--;
+            m--;
             // Borrow from the month immediately before endDate
             int borrowYear = endDate.Month == 1 ? endDate.Year - 1 : endDate.Year;
             int borrowMonth = endDate.Month == 1 ? 12 : endDate.Month - 1;
-            days += DateTime.DaysInMonth(borrowYear, borrowMonth);
+            d += DateTime.DaysInMonth(borrowYear, borrowMonth);
         }
-        if (months < 0)
+        if (m < 0)
         {
-            years--;
-            months += 12;
+            y--;
+            m += 12;
         }
 
-        Years = years;
-        Months = months;
-        Days = days;
-        Hours = distance.Hours;
-        Minutes = distance.Minutes;
-        Seconds = distance.Seconds;
-        TotalDays = (int)distance.TotalDays;
+        years = y;
+        months = m;
+        days = d;
+        hours = distance.Hours;
+        minutes = distance.Minutes;
+        seconds = distance.Seconds;
+        totalDays = (int)distance.TotalDays;
     }
 
     private void ToggleSettings()

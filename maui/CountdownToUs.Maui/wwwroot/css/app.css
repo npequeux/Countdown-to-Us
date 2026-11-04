@@ -112,6 +112,23 @@ h1 {
     margin-top: 1rem;
 }
 
+.countdown-divider {
+    border: 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+    margin: 1.5rem 0;
+}
+
+.countdown-second {
+    opacity: 0.85;
+    transform: scale(0.94);
+}
+
+@media (max-width: 768px) {
+    .countdown-second {
+        transform: scale(0.92);
+    }
+}
+
 .settings-wrapper {
     position: absolute;
     top: 1rem;
