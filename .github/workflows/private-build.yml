@@ -368,29 +368,29 @@ jobs:
         shell: pwsh
         run: |
           $script = @'
-import re, os
+          import re, os
 
-img_dir = 'maui/CountdownToUs.Maui/wwwroot/images'
-files = {}
-for f in os.listdir(img_dir):
-    if f.endswith('.jpg') or f.endswith('.png'):
-        try:
-            files[int(f.split('.')[0])] = f
-        except ValueError:
-            pass
+          img_dir = 'maui/CountdownToUs.Maui/wwwroot/images'
+          files = {}
+          for f in os.listdir(img_dir):
+              if f.endswith('.jpg') or f.endswith('.png'):
+                  try:
+                      files[int(f.split('.')[0])] = f
+                  except ValueError:
+                      pass
 
-entries = [f'        "images/{files[i]}"' for i in sorted(files)]
-local_images = ',\n'.join(entries)
-path = 'maui/CountdownToUs.Maui/Components/Home.razor'
-with open(path, 'r', encoding='utf-8') as f:
-    content = f.read()
-pattern = r'(private static readonly string\[\] DefaultImages = new\[\]\s*\n\s*\{).*?(\n\s*\};)'
-replacement = r'\g<1>\n' + local_images + r'\g<2>'
-new_content = re.sub(pattern, replacement, content, flags=re.DOTALL)
-with open(path, 'w', encoding='utf-8') as f:
-    f.write(new_content)
-print(f"Patched {path} with {len(files)} image(s)")
-'@
+          entries = [f'        "images/{files[i]}"' for i in sorted(files)]
+          local_images = ',\n'.join(entries)
+          path = 'maui/CountdownToUs.Maui/Components/Home.razor'
+          with open(path, 'r', encoding='utf-8') as f:
+              content = f.read()
+          pattern = r'(private static readonly string\[\] DefaultImages = new\[\]\s*\n\s*\{).*?(\n\s*\};)'
+          replacement = r'\g<1>\n' + local_images + r'\g<2>'
+          new_content = re.sub(pattern, replacement, content, flags=re.DOTALL)
+          with open(path, 'w', encoding='utf-8') as f:
+              f.write(new_content)
+          print(f"Patched {path} with {len(files)} image(s)")
+          '@
           $tmp = [System.IO.Path]::GetTempFileName() + ".py"
           [System.IO.File]::WriteAllText($tmp, $script)
           python3 $tmp
