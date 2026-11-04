@@ -30,7 +30,7 @@
         window.setHtmlLang = function (lang) {
             document.documentElement.setAttribute('lang', lang);
         };
-        window.updateCountdownDisplay = function (days, hours, minutes, seconds, breakdown) {
+        window.updateCountdownDisplay = function (days, hours, minutes, seconds, breakdown, days2, hours2, minutes2, seconds2, breakdown2) {
             var animateUpdate = function (id, val) {
                 var el = document.getElementById(id);
                 if (!el || el.textContent.trim() === val) return;
@@ -43,8 +43,14 @@
             animateUpdate('cnt-hours', hours);
             animateUpdate('cnt-minutes', minutes);
             animateUpdate('cnt-seconds', seconds);
+            animateUpdate('cnt2-days', days2);
+            animateUpdate('cnt2-hours', hours2);
+            animateUpdate('cnt2-minutes', minutes2);
+            animateUpdate('cnt2-seconds', seconds2);
             var bd = document.getElementById('cnt-breakdown');
             if (bd) bd.textContent = breakdown;
+            var bd2 = document.getElementById('cnt-breakdown-2');
+            if (bd2) bd2.textContent = breakdown2;
         };
     </script>
 </body>

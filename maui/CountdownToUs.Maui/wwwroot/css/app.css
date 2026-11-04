@@ -34,6 +34,8 @@ body::before {
     backdrop-filter: blur(10px);
     box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
     border: 1px solid rgba(255, 255, 255, 0.18);
+    width: 100%;
+    max-width: 720px;
 }
 
 h1 {
@@ -293,6 +295,68 @@ h1 {
 
     .settings-panel {
         max-width: calc(100vw - 3rem);
+    }
+}
+
+@media (max-width: 480px) {
+    body {
+        align-items: flex-start;
+        padding: 0.75rem 0;
+        overflow-x: hidden;
+    }
+
+    .container {
+        width: 100%;
+        max-width: 100%;
+        padding: 1rem 0.75rem;
+        border-radius: 14px;
+    }
+
+    h1 {
+        font-size: clamp(1.35rem, 6vw, 1.8rem);
+        margin-bottom: 1rem;
+    }
+
+    .image-container {
+        margin-bottom: 1rem;
+    }
+
+    .us-image {
+        height: clamp(120px, 38vw, 200px);
+    }
+
+    .countdown {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+    }
+
+    .time-unit {
+        min-width: 0;
+    }
+
+    .number {
+        font-size: clamp(1.45rem, 8vw, 2.25rem);
+        white-space: nowrap;
+    }
+
+    .label {
+        font-size: clamp(0.55rem, 2.7vw, 0.75rem);
+        letter-spacing: 0.02em;
+        margin-top: 0.35rem;
+    }
+
+    .countdown-second {
+        transform: none;
+    }
+
+    .days-breakdown {
+        font-size: 0.75rem;
+    }
+
+    .countdown-divider {
+        margin: 1rem 0;
     }
 }
 
