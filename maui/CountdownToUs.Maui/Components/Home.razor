@@ -8,75 +8,85 @@
 
 <PageTitle>Countdown to Us</PageTitle>
 
-<div class="container">
-    <h1>@CountdownTitle</h1>
-
-    <div class="image-container">
-        <img src="@CurrentImageSrc" alt="Paradise island" class="us-image" />
-        <div class="slideshow-controls" style="display:@(ActiveImages.Count > 1 ? "flex" : "none")">
-            <button class="slide-btn" @onclick="PrevSlide" aria-label="@T("prevImage")">&#8249;</button>
-            <span class="slide-indicator">@(CurrentSlide + 1) / @ActiveImages.Count</span>
-            <button class="slide-btn" @onclick="NextSlide" aria-label="@T("nextImage")">&#8250;</button>
+<div class="app-shell">
+    <header class="app-header">
+        <div class="brand-lockup">
+            <span class="brand-mark" aria-hidden="true">C</span>
+            <span>
+                <strong>Countdown to Us</strong>
+                <small>A little closer every day</small>
+            </span>
         </div>
-    </div>
-
-    <div class="countdown">
-        <div class="time-unit">
-            <span class="number" id="cnt-days">@TotalDays</span>
-            <span class="label">@T("days")</span>
-        </div>
-        <div class="time-unit">
-            <span class="number" id="cnt-hours">@Hours.ToString("D2")</span>
-            <span class="label">@T("hours")</span>
-        </div>
-        <div class="time-unit">
-            <span class="number" id="cnt-minutes">@Minutes.ToString("D2")</span>
-            <span class="label">@T("minutes")</span>
-        </div>
-        <div class="time-unit">
-            <span class="number" id="cnt-seconds">@Seconds.ToString("D2")</span>
-            <span class="label">@T("seconds")</span>
-        </div>
-    </div>
-
-    <div class="days-breakdown" id="cnt-breakdown">@DaysBreakdown</div>
-
-    <div class="target-date">@TargetDateDisplay</div>
-
-    <hr class="countdown-divider" />
-
-    <div class="countdown countdown-second">
-        <div class="time-unit">
-            <span class="number" id="cnt2-days">@TotalDays2</span>
-            <span class="label">@T("days")</span>
-        </div>
-        <div class="time-unit">
-            <span class="number" id="cnt2-hours">@Hours2.ToString("D2")</span>
-            <span class="label">@T("hours")</span>
-        </div>
-        <div class="time-unit">
-            <span class="number" id="cnt2-minutes">@Minutes2.ToString("D2")</span>
-            <span class="label">@T("minutes")</span>
-        </div>
-        <div class="time-unit">
-            <span class="number" id="cnt2-seconds">@Seconds2.ToString("D2")</span>
-            <span class="label">@T("seconds")</span>
-        </div>
-    </div>
-
-    <div class="days-breakdown" id="cnt-breakdown-2">@SecondDaysBreakdown</div>
-
-    <div class="settings-wrapper">
         <button class="settings-toggle"
                 @onclick="ToggleSettings"
                 aria-expanded="@SettingsPanelOpen.ToString().ToLowerInvariant()"
-                aria-controls="settings-panel"
-                aria-label="@T("settings")">&#9881;</button>
+                aria-controls="settings-panel">
+            <span class="settings-glyph" aria-hidden="true">&#9776;</span>
+            @T("settings")
+        </button>
+    </header>
 
-        @if (SettingsPanelOpen)
-        {
-            <div class="settings-panel" id="settings-panel">
-                <h2>@T("settings")</h2>
+    <main class="countdown-main">
+        <section class="memory-photo" aria-label="@T("photoStory")">
+            <img src="@CurrentImageSrc" alt="@T("photoStory")" class="us-image" />
+            <div class="photo-topline">
+                <span class="photo-tag">@T("photoStory")</span>
+                <span class="slide-indicator">@(CurrentSlide + 1) / @ActiveImages.Count</span>
+            </div>
+            <div class="photo-controls" style="display:@(ActiveImages.Count > 1 ? "flex" : "none")">
+                <button class="slide-btn" @onclick="PrevSlide" aria-label="@T("prevImage")">&#8249;</button>
+                <button class="slide-btn" @onclick="NextSlide" aria-label="@T("nextImage")">&#8250;</button>
+            </div>
+        </section>
+
+        <section class="primary-countdown" aria-labelledby="primary-date">
+            <div class="countdown-heading">
+                <p class="eyebrow">@T("countdownTo")</p>
+                <h1 id="primary-date">@_targetDate.ToString(T("dateFormat"), _currentCulture)</h1>
+                <p class="target-date">@TargetDateDisplay</p>
+            </div>
+            <div class="primary-reading" aria-live="polite" aria-atomic="true">
+                <span class="number days-number" id="cnt-days">@TotalDays</span>
+                <span class="days-unit">@T("daysToGo")</span>
+            </div>
+            <div class="clock-strip" aria-label="Time remaining today">
+                <div class="clock-unit"><span class="number" id="cnt-hours">@Hours.ToString("D2")</span><span class="clock-label">@T("hours")</span></div>
+                <div class="clock-unit"><span class="number" id="cnt-minutes">@Minutes.ToString("D2")</span><span class="clock-label">@T("minutes")</span></div>
+                <div class="clock-unit"><span class="number" id="cnt-seconds">@Seconds.ToString("D2")</span><span class="clock-label">@T("seconds")</span></div>
+            </div>
+            <div class="countdown-footer">
+                <span class="days-breakdown" id="cnt-breakdown">@DaysBreakdown</span>
+                <button class="edit-date" @onclick="ToggleSettings">@T("targetDateLabel")</button>
+            </div>
+        </section>
+
+        <section class="second-countdown" aria-label="@T("secondCountdown")">
+            <div class="second-heading">
+                <p class="eyebrow">@T("secondCountdown")</p>
+                <h2>@_secondTargetDate.ToString(T("dateFormat"), _currentCulture)</h2>
+                <p class="target-date">@SecondTargetDateDisplay</p>
+            </div>
+            <div class="secondary-clock" aria-live="polite" aria-atomic="true">
+                <div class="secondary-unit"><span class="number" id="cnt2-days">@TotalDays2</span><span class="secondary-label">@T("days")</span></div>
+                <div class="secondary-unit"><span class="number" id="cnt2-hours">@Hours2.ToString("D2")</span><span class="secondary-label">@T("hours")</span></div>
+                <div class="secondary-unit"><span class="number" id="cnt2-minutes">@Minutes2.ToString("D2")</span><span class="secondary-label">@T("minutes")</span></div>
+                <div class="secondary-unit"><span class="number" id="cnt2-seconds">@Seconds2.ToString("D2")</span><span class="secondary-label">@T("seconds")</span></div>
+            </div>
+            <p class="days-breakdown second-breakdown" id="cnt-breakdown-2">@SecondDaysBreakdown</p>
+        </section>
+    </main>
+
+    @if (SettingsPanelOpen)
+    {
+        <div class="settings-backdrop" @onclick="ToggleSettings">
+            <section class="settings-panel" id="settings-panel" role="dialog" aria-modal="true" aria-labelledby="settings-title" @onclick:stopPropagation="true">
+                <div class="settings-heading">
+                    <div>
+                        <p class="eyebrow">COUNTDOWN TO US</p>
+                        <h2 id="settings-title">@T("settings")</h2>
+                    </div>
+                    <button class="close-settings" @onclick="ToggleSettings" aria-label="Close settings">&#10005;</button>
+                </div>
                 <div class="settings-group">
                     <label for="language-select">@T("language")</label>
                     <select id="language-select" @bind="_currentLang" @bind:after="OnLanguageChanged">
@@ -97,7 +107,7 @@
                 <div class="settings-group">
                     <label for="photo-upload">@T("uploadPhotos")</label>
                     <InputFile id="photo-upload" accept="image/*" multiple OnChange="HandlePhotoUpload" />
-                    <button class="btn btn-danger" @onclick="ClearPhotos">@T("clearPhotos")</button>
+                    <button class="btn btn-secondary" @onclick="ClearPhotos">@T("clearPhotos")</button>
                 </div>
                 @if (WallpaperService.IsSupported)
                 {
@@ -106,29 +116,27 @@
                         <button class="btn" @onclick="SetWallpaperNow" disabled="@_wallpaperBusy">
                             @(_wallpaperBusy ? "…" : T("setWallpaper"))
                         </button>
-                        <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;font-weight:normal;">
+                        <label class="check-row">
                             <input type="checkbox" @bind="_autoWallpaper" @bind:after="OnAutoWallpaperChanged" />
                             @T("autoWallpaper")
                         </label>
                         @if (_autoWallpaper)
                         {
-                            <div style="display:flex;align-items:center;gap:0.5rem;">
-                                <label for="wallpaper-interval" style="font-weight:normal;">@T("wallpaperInterval")</label>
-                                <select id="wallpaper-interval" @bind="_wallpaperIntervalSeconds" @bind:after="OnWallpaperIntervalChanged">
-                                    <option value="@WallpaperIntervalEveryMinute">@T("wallpaperIntervalMinute")</option>
-                                    <option value="@WallpaperIntervalEverySecond">@T("wallpaperIntervalSecond")</option>
-                                </select>
-                            </div>
+                            <label for="wallpaper-interval">@T("wallpaperInterval")</label>
+                            <select id="wallpaper-interval" @bind="_wallpaperIntervalSeconds" @bind:after="OnWallpaperIntervalChanged">
+                                <option value="@WallpaperIntervalEveryMinute">@T("wallpaperIntervalMinute")</option>
+                                <option value="@WallpaperIntervalEverySecond">@T("wallpaperIntervalSecond")</option>
+                            </select>
                         }
                         @if (!string.IsNullOrEmpty(_wallpaperStatus))
                         {
-                            <span style="font-size:0.82rem;opacity:0.75;">@_wallpaperStatus</span>
+                            <span class="wallpaper-status">@_wallpaperStatus</span>
                         }
                     </div>
                 }
-            </div>
-        }
-    </div>
+            </section>
+        </div>
+    }
 </div>
 
 @code {
@@ -136,6 +144,7 @@
     private const string SecondTargetDate = CountdownToUs.Maui.Constants.AppDefaults.SecondTargetDateIso;
     private static readonly string[] DefaultImages = new[]
     {
+        "images/us.jpg",
         "images/1.jpg",
         "images/2.jpg",
         "images/3.jpg",
@@ -163,6 +172,9 @@
             ["clearPhotos"] = "Clear Photos",
             ["targetDatePrefix"] = "Target Date:",
             ["countdownTo"] = "Countdown to",
+            ["daysToGo"] = "days to go",
+            ["secondCountdown"] = "Also counting",
+            ["photoStory"] = "A memory of us",
             ["alertSelectDate"] = "Please select a date and time.",
             ["confirmPastDate"] = "The selected date is in the past. The countdown will show all zeros. Continue?",
             ["alertStorageError"] = "Could not save images: storage limit may be exceeded. Try using fewer or smaller images.",
@@ -193,6 +205,9 @@
             ["clearPhotos"] = "Effacer les photos",
             ["targetDatePrefix"] = "Date cible :",
             ["countdownTo"] = "Compte à rebours jusqu'au",
+            ["daysToGo"] = "jours restants",
+            ["secondCountdown"] = "Aussi au compte à rebours",
+            ["photoStory"] = "Un souvenir de nous",
             ["alertSelectDate"] = "Veuillez sélectionner une date et une heure.",
             ["confirmPastDate"] = "La date sélectionnée est dans le passé. Le compte à rebours affichera zéro. Continuer ?",
             ["alertStorageError"] = "Impossible de sauvegarder les images : la limite de stockage est peut-être dépassée. Essayez avec moins d'images ou des images plus petites.",
@@ -223,6 +238,9 @@
             ["clearPhotos"] = "Borrar fotos",
             ["targetDatePrefix"] = "Fecha objetivo:",
             ["countdownTo"] = "Cuenta regresiva hasta el",
+            ["daysToGo"] = "días restantes",
+            ["secondCountdown"] = "También cuenta",
+            ["photoStory"] = "Un recuerdo nuestro",
             ["alertSelectDate"] = "Por favor selecciona una fecha y hora.",
             ["confirmPastDate"] = "La fecha seleccionada está en el pasado. La cuenta regresiva mostrará ceros. ¿Continuar?",
             ["alertStorageError"] = "No se pudieron guardar las imágenes: puede que se haya superado el límite de almacenamiento. Intenta con menos imágenes o imágenes más pequeñas.",
@@ -337,7 +355,9 @@
     private string SecondDaysBreakdown => $"{Years2} {T("years")}, {Months2} {T("months")}, {Days2} {T("days")}";
 
     // Slideshow
-    private List<string> _defaultImages = DefaultImages.OrderBy(_ => Random.Shared.Next()).ToList();
+    private List<string> _defaultImages = DefaultImages.Take(1)
+        .Concat(DefaultImages.Skip(1).OrderBy(_ => Random.Shared.Next()))
+        .ToList();
     private List<string> SlideshowImages { get; set; } = new();
     private int CurrentSlide { get; set; }
     private List<string> ActiveImages => SlideshowImages.Count > 0 ? SlideshowImages : _defaultImages;
